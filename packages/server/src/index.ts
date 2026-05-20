@@ -1,16 +1,7 @@
 import { createServer } from './server.js'
 import { loadConfig } from './config.js'
-import { runSetup, configExists } from './setup.js'
 
 async function main() {
-  // In Docker/k8s, env vars take precedence — skip interactive setup
-  const hasEnvConfig = !!(process.env.INDEXER_URL && process.env.INDEXER_API_KEY)
-  if (!configExists() && !hasEnvConfig) {
-    console.log('No configuration found. Starting first-launch setup...\n')
-    await runSetup()
-    console.log()
-  }
-
   const config = loadConfig()
   const server = createServer(config)
   server.start()

@@ -4,7 +4,11 @@ metadata:
   name: tracktorr-config
   namespace: tracktorr
 data:
-  PORT: "3030"
-  HOST: "0.0.0.0"
-  DOWNLOAD_DIR: /data/downloads
-  INDEXER_URL: "http://prowlarr:9696"
+  config.json: |
+    {
+      "port": 3030,
+      "host": "0.0.0.0",
+      "indexerUrl": "http://prowlarr:9696",
+      "indexerApiKey": "CHANGE_ME",
+      "downloadDir": "/data/downloads"
+    }

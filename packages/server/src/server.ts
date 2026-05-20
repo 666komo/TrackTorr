@@ -26,23 +26,19 @@ export function createServer(config: ServerConfig) {
   app.use('/api/stream', createStreamRouter(engine))
   app.use('/api/config', createConfigRouter())
 
-  // Serve built frontend for production
+  const hasIndexer = config.indexer?.url && config.indexer?.apiKey
+
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', indexer: !!hasIndexer })
+  })
+
+  // Serve built frontend for production (must be after API routes)
   if (existsSync(clientDist)) {
     app.use(express.static(clientDist))
     app.get('*', (_req, res) => {
       res.sendFile(path.join(clientDist, 'index.html'))
     })
   }
-
-  function hasIndexer(): boolean {
-    if (!configExists()) return false
-    const cfg = readConfig()
-    return !!(cfg.indexerUrl && cfg.indexerApiKey)
-  }
-
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', indexer: hasIndexer() })
-  })
 
   const start = () => {
     app.listen(config.port, config.host, () => {

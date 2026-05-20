@@ -22,12 +22,10 @@ spec:
           ports:
             - containerPort: 3030
               name: http
-          envFrom:
-            - configMapRef:
-                name: tracktorr-config
-            - secretRef:
-                name: tracktorr-secret
           volumeMounts:
+            - mountPath: /app/config/config.json
+              name: config
+              subPath: config.json
             - mountPath: /data
               name: data
           resources:
@@ -38,6 +36,9 @@ spec:
               cpu: 4000m
               memory: 2Gi
       volumes:
+        - name: config
+          configMap:
+            name: tracktorr-config
         - name: data
           persistentVolumeClaim:
             claimName: tracktorr-data
