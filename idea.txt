@@ -1,2 +1,0 @@
-This project is torrent streaming client with webui, that can be hosted natively on linux server.
-Apart from other solutions/project, i want this project to take advantage of torrent indexer (like prowlarr/jackett) using communication with API.
