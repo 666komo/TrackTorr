@@ -6,3 +6,4 @@ packages/*/dist/
 packages/client/tsconfig.tsbuildinfo
 SUMMARY.md
 idea.txt
+.gitignore
