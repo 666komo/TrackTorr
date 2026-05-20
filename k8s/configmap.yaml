@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tracktorr-config
+  namespace: tracktorr
+data:
+  PORT: "3030"
+  HOST: "0.0.0.0"
+  DOWNLOAD_DIR: /data/downloads
+  INDEXER_URL: "http://prowlarr:9696"

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracktorr
+  namespace: tracktorr
+  labels:
+    app: tracktorr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tracktorr
+  template:
+    metadata:
+      labels:
+        app: tracktorr
+    spec:
+      containers:
+        - name: tracktorr
+          image: tracktorr:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3030
+              name: http
+          envFrom:
+            - configMapRef:
+                name: tracktorr-config
+            - secretRef:
+                name: tracktorr-secret
+          volumeMounts:
+            - mountPath: /data
+              name: data
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 4000m
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: tracktorr-data

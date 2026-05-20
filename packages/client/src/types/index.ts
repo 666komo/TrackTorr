@@ -1,0 +1,41 @@
+export interface IndexerResult {
+  title: string
+  guid: string
+  size: number
+  seeders: number
+  leechers: number
+  magnetUrl?: string
+  infoHash?: string
+  indexer: string
+  category?: string
+  publishDate: string
+}
+
+export interface TorrentStatus {
+  infoHash: string
+  name: string
+  progress: number
+  downloadSpeed: number
+  uploadSpeed: number
+  downloaded: number
+  uploaded: number
+  peers: number
+  timeRemaining: number | null
+  status: 'downloading' | 'streaming' | 'completed' | 'paused' | 'error'
+  files: TorrentFile[]
+}
+
+export interface TorrentFile {
+  name: string
+  path: string
+  length: number
+  index: number
+}
+
+export interface AppConfig {
+  port: number
+  host: string
+  indexerUrl: string
+  indexerApiKey: string
+  downloadDir: string
+}
