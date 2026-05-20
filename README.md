@@ -124,11 +124,3 @@ The Go binary runs as a subprocess of Node.js, communicating via stdin/stdout JS
 
 - [torrserver](https://github.com/YouROK/TorrServer) — the original Go + anacrolix/torrent approach that proved this architecture works
 - [WebTorrent](https://webtorrent.io) — made browser torrenting possible
-
-## Vibe Coded
-
-This entire project was built under time pressure by prompting an LLM (opencode / Claude) directly in the terminal, iterating on real log output and runtime behavior. No planning docs, no tickets, no meetings — just vibe.
-
-## License
-
-MIT
