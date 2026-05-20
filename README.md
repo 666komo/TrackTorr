@@ -14,7 +14,6 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 - **Stream** MKV/MP4/AVI/MOV directly in browser via `<video>` element
 - **EAC3 transcode** — detects unsupported audio codecs with ffprobe, transcodes to AAC on the fly via ffmpeg
 - **Dual engine** — WebTorrent (management) + Go anacrolix/torrent (streaming) for reliable piece prioritization
-- **Docker / K3s ready** — ship it anywhere
 
 ## Dependencies
 
@@ -22,7 +21,7 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 - **Node.js** 22+
 - **ffmpeg + ffprobe** (runtime — EAC3 transcoding)
 - **npm** (build only)
-- Prowlarr or Jackett instance (optional — without one, add torrents by magnet link)
+- Prowlarr
 
 ## Quick Start
 
@@ -33,7 +32,7 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 sudo apt install ffmpeg nodejs npm golang-go
 
 # Build
-git clone git@github.com:666komo/TrackTorr.git && cd TrackTorr
+git clone https://github.com/666komo/TrackTorr && cd TrackTorr
 npm install
 npm run build
 
