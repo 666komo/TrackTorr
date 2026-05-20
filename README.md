@@ -12,8 +12,9 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 
 - **Search** via Prowlarr or Jackett (any public/private indexer)
 - **Stream** MKV/MP4/AVI/MOV directly in browser via `<video>` element
-- **EAC3 transcode** — detects unsupported audio codecs with ffprobe, transcodes to AAC on the fly via ffmpeg
+- **Codec detection** — detects unsupported audio codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) with ffprobe, transcodes to AAC on the fly via ffmpeg
 - **Dual engine** — WebTorrent (management) + Go anacrolix/torrent (streaming) for reliable piece prioritization
+- **Transcode cache** — once transcoded, output is saved to disk and served directly on repeat requests — no re-encode
 
 ## Dependencies
 
@@ -32,7 +33,7 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 sudo pacman -S ffmpeg nodejs npm go
 
 # Build
-git clone git@github.com:666komo/TrackTorr.git && cd TrackTorr
+git clone https://github.com/666komo/TrackTorr.git && cd TrackTorr
 npm install
 npm run build
 
@@ -120,7 +121,7 @@ TrackTorr/
 1. **Search** — queries your Prowlarr/Jackett instance, returns results in the UI
 2. **Add** — torrent is added to both WebTorrent (status/management) and Go engine (streaming) simultaneously
 3. **Stream** — browser requests the file, Go serves it via `http.ServeContent` with `SetResponsive()` piece prioritization
-4. **Transcode** — if ffprobe detects EAC3 audio (unsupported by browsers), ffmpeg transcodes to AAC 2ch 128kbps on the fly
+4. **Transcode** — if ffprobe detects an unsupported audio codec (EAC3, AC3, DTS, DTS-HD, TrueHD), ffmpeg transcodes to AAC 2ch 128kbps on the fly. Result is cached to disk for subsequent requests.
 
 The Go binary runs as a subprocess of Node.js, communicating via stdin/stdout JSON commands.
 
