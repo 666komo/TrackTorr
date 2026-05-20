@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -34,6 +35,8 @@ type command struct {
 	Type     string `json:"type,omitempty"`
 	URI      string `json:"uri,omitempty"`
 }
+
+var transcodeCacheDir string
 
 var defaultTrackers = []string{
 	"udp://tracker.opentrackr.org:1337/announce",
@@ -93,6 +96,9 @@ func hasReaders(hash string) bool {
 func main() {
 	downloadDir := flag.String("dir", os.TempDir(), "download cache directory")
 	flag.Parse()
+
+	transcodeCacheDir = filepath.Join(*downloadDir, "_transcode_cache")
+	os.MkdirAll(transcodeCacheDir, 0755)
 
 	cfg := torrent.NewDefaultClientConfig()
 	cfg.DataDir = *downloadDir
@@ -279,6 +285,22 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	addReader(infoHash)
 	defer doneReader(infoHash)
 
+	cacheKey := fmt.Sprintf("%s_%d.mp4", infoHash, fileIndex)
+	cachePath := filepath.Join(transcodeCacheDir, cacheKey)
+
+	// Serve from cache if available
+	if cached, err := os.Open(cachePath); err == nil {
+		defer cached.Close()
+		fi, _ := cached.Stat()
+		if fi != nil && fi.Size() > 0 {
+			log.Printf("[go] transcode cache hit %s/%d (%d bytes)", infoHash[:12], fileIndex, fi.Size())
+			w.Header().Set("Content-Type", "video/mp4")
+			w.Header().Set("Cache-Control", "no-transform")
+			http.ServeContent(w, r, "", fi.ModTime(), cached)
+			return
+		}
+	}
+
 	reader := file.NewReader()
 	reader.SetResponsive()
 	reader.SetReadahead(32 << 20)
@@ -319,8 +341,22 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 
+	// Tee ffmpeg stdout to both HTTP response and a cache file
+	cacheFile, err := os.Create(cachePath)
+	if err != nil {
+		log.Printf("[go] cache write error %s/%d: %v", infoHash[:12], fileIndex, err)
+	}
+	if cacheFile != nil {
+		defer cacheFile.Close()
+	}
+
 	pipeR, pipeW := io.Pipe()
-	cmd.Stdout = pipeW
+
+	var stdout io.Writer = pipeW
+	if cacheFile != nil {
+		stdout = io.MultiWriter(pipeW, cacheFile)
+	}
+	cmd.Stdout = stdout
 
 	go func() {
 		flusher, canFlush := w.(http.Flusher)
@@ -374,6 +410,14 @@ type probeResult struct {
 	HasEac3   bool          `json:"has_eac3"`
 	Supported bool          `json:"supported"`
 	Error     string        `json:"error,omitempty"`
+}
+
+var unsupportedAudio = map[string]string{
+	"eac3":   "EAC3",
+	"ac3":    "AC3",
+	"dts":    "DTS",
+	"dts-hd": "DTS-HD",
+	"truehd": "TrueHD",
 }
 
 func handleProbe(w http.ResponseWriter, r *http.Request, client *torrent.Client) {
@@ -446,9 +490,11 @@ func runProbe(file *torrent.File) probeResult {
 
 	hasEac3 := false
 	for _, s := range raw.Streams {
-		if s.CodecType == "audio" && s.CodecName == "eac3" {
-			hasEac3 = true
-			break
+		if s.CodecType == "audio" {
+			if _, ok := unsupportedAudio[s.CodecName]; ok {
+				hasEac3 = true
+				break
+			}
 		}
 	}
 
@@ -517,6 +563,8 @@ func cleanupLoop(client *torrent.Client) {
 				if strings.EqualFold(t.InfoHash().HexString(), hash) {
 					t.Drop()
 					log.Printf("[go] dropped inactive %s", hash[:12])
+					fmt.Printf(`{"type":"dropped","infoHash":"%s"}`+"\n", hash)
+					os.Stdout.Sync()
 					break
 				}
 			}

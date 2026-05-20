@@ -40,18 +40,27 @@ export class TorrentEngine {
     })
     this.goProcess = proc
 
-    let readyLine = ''
+    let buf = ''
     proc.stdout!.on('data', (chunk: Buffer) => {
-      readyLine += chunk.toString()
-      const idx = readyLine.indexOf('\n')
-      if (idx !== -1) {
-        const line = readyLine.slice(0, idx).trim()
+      buf += chunk.toString()
+      while (true) {
+        const idx = buf.indexOf('\n')
+        if (idx === -1) break
+        const line = buf.slice(0, idx).trim()
+        buf = buf.slice(idx + 1)
+        if (!line) continue
         try {
           const msg = JSON.parse(line)
           if (msg.type === 'ready') {
             this.goPort = msg.port
             this.goReady = true
             console.log('[go] streamer ready on port', msg.port)
+          } else if (msg.type === 'dropped') {
+            const hash = msg.infoHash as string
+            console.log('[go] dropped', hash.slice(0, 12))
+            this.torrentSources.delete(hash)
+            const t = this.client.get(hash)
+            if (t) this.client.remove(hash)
           }
         } catch { /* ignore partial json */ }
       }

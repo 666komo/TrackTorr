@@ -34,7 +34,7 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
         if (cancelled) return
         if (!data.supported && data.has_eac3) {
           setWarning(
-            'EAC3 audio detected — transcoding audio to AAC for browser playback. Seeking only works within the buffered window.',
+            'Unsupported audio codec detected — transcoding audio to AAC for browser playback.',
           )
           setUseTranscode(true)
         } else if (data.error) {

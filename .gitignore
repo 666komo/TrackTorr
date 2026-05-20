@@ -5,3 +5,4 @@ dist/
 packages/*/dist/
 packages/client/tsconfig.tsbuildinfo
 config.json
+possible_weak_points.txt
