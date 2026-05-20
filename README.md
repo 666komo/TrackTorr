@@ -25,22 +25,22 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 
 ## Quick Start
 
-### Bare Metal
+### Bare Metal (Arch Linux)
 
 ```bash
 # Install dependencies
-sudo apt install ffmpeg nodejs npm golang-go
+sudo pacman -S ffmpeg nodejs npm go
 
 # Build
-git clone https://github.com/666komo/TrackTorr && cd TrackTorr
+git clone git@github.com:666komo/TrackTorr.git && cd TrackTorr
 npm install
 npm run build
 
-# Configure (first-launch interactive setup)
-npm start
-# OR use env vars:
-export INDEXER_URL=http://prowlarr:9696
-export INDEXER_API_KEY=your_key
+# Configure
+cp config/config.example.json config/config.json
+# Edit config/config.json with your settings
+
+# Run
 npm start
 ```
 
@@ -49,7 +49,11 @@ Open `http://localhost:3030`.
 ### Docker
 
 ```bash
-# Build and run
+# 1. Create config file
+cp config/config.example.json config/config.json
+# Edit config/config.json with your settings
+
+# 2. Build and run
 docker compose up -d
 
 # Or build manually:
@@ -57,8 +61,7 @@ docker build -t tracktorr .
 docker run -d \
   --name tracktorr \
   -p 3030:3030 \
-  -e INDEXER_URL=http://192.168.0.184:30096 \
-  -e INDEXER_API_KEY=your_key \
+  -v ./config/config.json:/app/config/config.json:ro \
   -v tracktorr-data:/data \
   tracktorr
 ```
@@ -66,27 +69,29 @@ docker run -d \
 ### K3s / Kubernetes
 
 ```bash
-# Edit your API key first
-vim k8s/secret.yaml
+# 1. Edit the API key in the config map
+vim k8s/configmap.yaml
 
-# Deploy
+# 2. Deploy
 kubectl apply -k k8s/
 
-# Access via port-forward or the ingress hostname
+# 3. Access via port-forward or the ingress hostname
 kubectl port-forward -n tracktorr svc/tracktorr 3030:3030
 ```
 
 The ingress rules are in `k8s/ingress.yaml` (default host: `tracktorr.local`). Adjust for your domain.
 
-## Environment Variables
+## Configuration
 
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `3030` | Server port |
-| `HOST` | `0.0.0.0` | Bind address |
-| `INDEXER_URL` | — | Prowlarr/Jackett URL |
-| `INDEXER_API_KEY` | — | Prowlarr/Jackett API key |
-| `DOWNLOAD_DIR` | `/data/downloads` | Torrent cache directory |
+Copy `config/config.example.json` to `config/config.json` and edit:
+
+| Field | Description |
+|---|---|
+| `port` | Server port (default: 3030) |
+| `host` | Bind address (default: 0.0.0.0) |
+| `indexerUrl` | Prowlarr or Jackett URL (omit to disable search) |
+| `indexerApiKey` | Your indexer API key |
+| `downloadDir` | Torrent cache directory |
 
 ## Project Structure
 
