@@ -5,6 +5,7 @@ import SearchResults from './components/SearchResults'
 import TorrentList from './components/TorrentList'
 import Player from './components/Player'
 import SettingsModal from './components/SettingsModal'
+import trackIcon from './../public/trackIcon.svg'
 import type { IndexerResult, TorrentStatus } from './types'
 
 export default function App() {
@@ -65,7 +66,10 @@ export default function App() {
     <div style={{ maxWidth: 960, margin: '0 auto', padding: 16, fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ margin: 0 }}>TrackTorr</h1>
+          <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img src={trackIcon} alt="" style={{ width: 28, height: 28 }} />
+            TrackTorr
+          </h1>
           <span style={{ fontSize: 12, color: indexerConnected ? 'green' : '#999' }}>
             indexer {indexerConnected ? 'connected' : 'not configured'}
           </span>
