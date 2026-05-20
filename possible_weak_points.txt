@@ -1,0 +1,128 @@
+⚠️ The real architectural risks (this is the important part)
+
+Not syntax issues — system behavior issues.
+
+1. ❗ AC3 / DTS / TrueHD are explicitly unhandled
+
+This is your biggest real-world gap.
+
+You wrote:
+
+❌ NOT detected (will fail)
+
+That means you currently have:
+
+file plays → silent audio or broken stream → user blames player
+
+This will become your #1 support issue.
+
+Why it matters
+
+EAC3 was your known pain point
+but:
+
+AC3 + DTS are WAY more common in torrents
+
+So your system currently handles:
+
+known edge case well (EAC3)
+but misses the major population of cases
+What this implies structurally
+
+Your pipeline assumes:
+
+“we detect everything important”
+
+But ffprobe reality is:
+
+detection ≠ capability mapping
+streams can be nested
+codecs may be mislabeled
+containers lie
+→ TRUE. This is your biggest real gap. The probe only checks `codec_name == "eac3"`. AC3 (`ac3`), DTS (`dts`), TrueHD (`truehd`) all slip through and the browser gets silent audio or broken playback. These codecs are more common than EAC3 in torrents. Fix: expand the probe's codec blacklist.
+
+2. ❗ Dual-engine state duplication risk (still present, but subtler now)
+
+You’ve improved clarity, but still:
+
+WebTorrent = state
+Go engine = runtime truth
+
+Even if WebTorrent is “just UI”, it still tracks lifecycle.
+
+This creates:
+
+orphan torrents
+ghost entries in UI
+mismatched cleanup timing
+
+Your 60s cleanup helps, but doesn’t eliminate divergence.
+→ TRUE. WebTorrent tracks the torrent list for the UI, Go engine actually streams. They can desync — a torrent removed in Go can still show in the UI, or vice versa. The 60s timeout handles the worst cases but doesn't solve the architectural split.
+
+3. ❗ stdin/stdout JSON IPC is now a scaling bottleneck (not correctness, but debugging)
+
+At v0.1 this is fine.
+
+At v1.x you will hit:
+
+failure modes:
+partial JSON writes
+buffering delays
+backpressure issues
+log contamination (still the big one)
+no schema evolution strategy
+
+This is currently:
+
+“simple pipe protocol”
+
+but it is not versioned API
+
+You will eventually want:
+
+message IDs
+request/response correlation
+schema versioning
+
+Otherwise debugging becomes:
+
+"why did stream start twice?"
+→ parse logs for 40 minutes
+→ MOSTLY FALSE for v0.1. These are real concerns at scale (multi-user, complex command flows), but none have manifested yet. Go's `bufio.Scanner` handles newline-delimited JSON correctly, and stderr/stdout are separate OS pipes. Partial writes and backpressure are handled by the OS pipe buffer (64KB on Linux). Schema versioning and message IDs would be needed if the protocol grows beyond 3 command types — currently it hasn't.
+
+4. ❗ ffmpeg pipeline is stateless (important scaling limitation)
+
+Right now:
+
+request → ffprobe → ffmpeg → stream
+
+This works, but it means:
+
+repeated transcode decisions
+no caching of derived streams
+CPU rework on restart/retry
+
+This will become expensive fast under multiple users.
+
+Even a simple cache like:
+
+hash → "already transcoded AAC version exists"
+
+would dramatically improve efficiency.
+→ TRUE. Every transcode spawns a fresh ffmpeg from scratch — no caching. Same 2-hour movie requested twice = double CPU. Acceptable for single-user, wasteful at multi-user. A simple `infoHash/fileIndex → transcoded segments` cache would fix this, but adds complexity (cache invalidation, storage, serving cached vs live).
+
+5. ❗ “ServeContent + SetResponsive()” implies piece control coupling
+
+This is powerful, but risky.
+
+You are effectively mixing:
+
+HTTP streaming semantics
+torrent piece prioritization logic
+
+That creates a tight coupling:
+
+stream behavior depends on torrent engine internals
+
+This is fine now, but limits future refactoring (e.g. swapping torrent engine).
+→ FALSE. `SetResponsive()` is the intended API for torrent→HTTP streaming — it's not coupling, it's the design. Swapping the torrent engine would require rewriting the streaming layer regardless of this API choice. This point mistakes architectural intent for architectural weakness.
