@@ -12,6 +12,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [flushing, setFlushing] = useState<'cache' | 'downloads' | null>(null)
+  const [flushMsg, setFlushMsg] = useState('')
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -27,6 +29,21 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       setMessage('Failed to save configuration')
     }
     setSaving(false)
+  }
+
+  const handleFlush = async (target: 'cache' | 'downloads') => {
+    const label = target === 'cache' ? 'transcode cache' : 'all torrent downloads'
+    if (!window.confirm(`Flush ${label}? This cannot be undone.`)) return
+    setFlushing(target)
+    setFlushMsg('')
+    try {
+      const fn = target === 'cache' ? api.flushCache : api.flushDownloads
+      const res = await fn()
+      setFlushMsg(res.message)
+    } catch (e: any) {
+      setFlushMsg(e.message || 'Failed')
+    }
+    setFlushing(null)
   }
 
   return (
@@ -136,6 +153,51 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             {saving ? 'Saving\u2026' : 'Save'}
           </button>
         </form>
+
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border-light)', margin: '20px 0' }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Maintenance</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => handleFlush('cache')}
+              disabled={flushing !== null}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border-light)',
+                background: 'transparent',
+                color: 'var(--text)',
+                cursor: flushing !== null ? 'default' : 'pointer',
+                fontSize: 13,
+                opacity: flushing !== null ? 0.5 : 1,
+              }}
+            >
+              {flushing === 'cache' ? 'Flushing\u2026' : 'Flush Cache'}
+            </button>
+            <button
+              onClick={() => handleFlush('downloads')}
+              disabled={flushing !== null}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--danger)',
+                background: 'transparent',
+                color: 'var(--danger)',
+                cursor: flushing !== null ? 'default' : 'pointer',
+                fontSize: 13,
+                opacity: flushing !== null ? 0.5 : 1,
+              }}
+            >
+              {flushing === 'downloads' ? 'Flushing\u2026' : 'Flush Downloads'}
+            </button>
+          </div>
+          {flushMsg && (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '4px 0' }}>{flushMsg}</div>
+          )}
+        </div>
       </div>
     </div>
   )

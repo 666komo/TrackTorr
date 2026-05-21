@@ -165,6 +165,16 @@ export class TorrentEngine {
     }
   }
 
+  removeAll(): void {
+    const hashes = this.client.torrents.map((t) => t.infoHash)
+    for (const h of hashes) {
+      this.stopPreload(h)
+      this.sendGoCommand({ cmd: 'remove', infoHash: h })
+      this.torrentSources.delete(h)
+      this.client.remove(h)
+    }
+  }
+
   getTorrent(infoHash: string): { infoHash: string; name: string; files: { name: string; path: string; length: number; index: number }[] } | undefined {
     const torrent = this.client.torrents.find(
       (t) => t.infoHash === infoHash || t.infoHash.toLowerCase() === infoHash.toLowerCase()

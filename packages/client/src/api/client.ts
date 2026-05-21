@@ -71,4 +71,10 @@ export const api = {
 
   probeUrl: (infoHash: string, fileIndex: number) =>
     `${BASE}/stream/probe/${infoHash}/${fileIndex}`,
+
+  flushCache: () =>
+    fetchJson<{ success: boolean; message: string }>('/maintenance/flush-cache', { method: 'POST' }),
+
+  flushDownloads: () =>
+    fetchJson<{ success: boolean; message: string }>('/maintenance/flush-downloads', { method: 'POST' }),
 }

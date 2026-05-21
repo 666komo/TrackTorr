@@ -7,6 +7,7 @@ import { createTorrentRouter } from './api/torrents.js'
 import { createSearchRouter } from './api/search.js'
 import { createStreamRouter } from './api/stream.js'
 import { createConfigRouter } from './api/config.js'
+import { createMaintenanceRouter } from './api/maintenance.js'
 import { TorrentEngine } from './torrent/engine.js'
 import { readConfig, configExists } from './setup.js'
 import type { ServerConfig } from './types/index.js'
@@ -25,6 +26,7 @@ export function createServer(config: ServerConfig) {
   app.use('/api/search', createSearchRouter())
   app.use('/api/stream', createStreamRouter(engine))
   app.use('/api/config', createConfigRouter())
+  app.use('/api/maintenance', createMaintenanceRouter(engine, config.downloadDir))
 
   const hasIndexer = config.indexer?.url && config.indexer?.apiKey
 
