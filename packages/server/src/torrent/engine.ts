@@ -234,6 +234,8 @@ export class TorrentEngine {
       path: f.path,
       length: f.length,
       index: i,
+      downloaded: f.downloaded,
+      streamable: f.downloaded > 0,
     }))
 
     return status

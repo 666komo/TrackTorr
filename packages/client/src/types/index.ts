@@ -30,6 +30,8 @@ export interface TorrentFile {
   path: string
   length: number
   index: number
+  downloaded: number
+  streamable: boolean
 }
 
 export interface AppConfig {

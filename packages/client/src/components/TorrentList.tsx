@@ -117,23 +117,24 @@ export default function TorrentList({ torrents, onRemove, onPlay }: TorrentListP
                 {t.files.map((f) => (
                   <button
                     key={f.index}
-                    onClick={() => onPlay(t.infoHash, f.index, f.name)}
+                    onClick={() => f.streamable && onPlay(t.infoHash, f.index, f.name)}
+                    disabled={!f.streamable}
                     style={{
                       padding: '3px 10px',
                       borderRadius: 4,
-                      border: '1px solid var(--success)',
+                      border: f.streamable ? '1px solid var(--success)' : '1px solid var(--text-muted)',
                       background: 'transparent',
-                      color: 'var(--success)',
-                      cursor: 'pointer',
+                      color: f.streamable ? 'var(--success)' : 'var(--text-muted)',
+                      cursor: f.streamable ? 'pointer' : 'default',
                       fontSize: 11,
                       maxWidth: 220,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                     }}
-                    title={f.name}
+                    title={f.streamable ? f.name : 'Waiting for download data\u2026'}
                   >
-                    Play: {f.name}
+                    {f.streamable ? `Play: ${f.name}` : `Waiting: ${f.name}`}
                   </button>
                 ))}
               </div>
