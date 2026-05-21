@@ -73,10 +73,16 @@ docker run -d \
 # 1. Edit the API key in the config map
 vim k8s/configmap.yaml
 
-# 2. Deploy
+# 2. Build Docker image
+docker build -t tracktorr:latest .
+
+# 3. Import into k3s containerd (single-node)
+docker save tracktorr:latest | sudo k3s ctr images import -
+
+# 4. Deploy
 kubectl apply -k k8s/
 
-# 3. Access via port-forward or the ingress hostname
+# 5. Access via port-forward or the ingress hostname
 kubectl port-forward -n tracktorr svc/tracktorr 3030:3030
 ```
 
