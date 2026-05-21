@@ -1,6 +1,7 @@
 {
   "name": "tracktorr",
   "private": true,
+  "type": "module",
   "workspaces": ["packages/client", "packages/server"],
   "scripts": {
     "dev": "npm run build:streamer && concurrently \"npm run dev:server\" \"npm run dev:client\"",

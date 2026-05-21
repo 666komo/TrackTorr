@@ -13,10 +13,12 @@ RUN CGO_ENABLED=0 go build -o /dist/streamer .
 # ----------------------------------------
 # STAGE 2: Build server (tsc) + frontend (Vite)
 # ----------------------------------------
-FROM node:22-alpine AS node-builder
+FROM node:22-bookworm-slim AS node-builder
 WORKDIR /build
 
-RUN apk add --no-cache python3 make g++ gcc
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
 COPY packages/client/package.json packages/client/
