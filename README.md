@@ -12,17 +12,18 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 
 - **Search** via Prowlarr or Jackett (any public/private indexer)
 - **Stream** MKV/MP4/AVI/MOV directly in browser via `<video>` element
-- **Codec detection** — detects unsupported audio codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) with ffprobe, transcodes to AAC on the fly via ffmpeg
+- **Codec detection** — detects unsupported audio codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) with ffprobe, transcodes to AAC 2ch 128kbps on the fly via ffmpeg
 - **Dual engine** — WebTorrent (management) + Go anacrolix/torrent (streaming) for reliable piece prioritization
-- **Transcode cache** — once transcoded, output is saved to disk and served directly on repeat requests — no re-encode
+- **Transcode cache** — once transcoded, output is saved atomically to disk and served directly on repeat requests — no re-encode
 
 ## Dependencies
 
 - **Go** 1.26+ (build only)
 - **Node.js** 22+
-- **ffmpeg + ffprobe** (runtime — EAC3 transcoding)
+- **ffmpeg + ffprobe** (runtime — unsupported audio transcoding)
 - **npm** (build only)
-- Prowlarr
+- **Build tools** — `python3`, `make`, `g++`, `gcc` (build only — native addon compilation)
+- **Prowlarr** or **Jackett** (indexer — optional, search still works without)
 
 ## Quick Start
 
@@ -77,6 +78,7 @@ vim k8s/configmap.yaml
 docker build -t tracktorr:latest .
 
 # 3. Import into k3s containerd (single-node)
+#    (Skip this if using a registry — just push and set image in deployment.yaml)
 docker save tracktorr:latest | sudo k3s ctr images import -
 
 # 4. Deploy
@@ -94,42 +96,80 @@ Copy `config/config.example.json` to `config/config.json` and edit:
 
 | Field | Description |
 |---|---|
-| `port` | Server port (default: 3030) |
-| `host` | Bind address (default: 0.0.0.0) |
+| `port` | Server port (required) |
+| `host` | Bind address (required — e.g. `0.0.0.0`) |
 | `indexerUrl` | Prowlarr or Jackett URL (omit to disable search) |
-| `indexerApiKey` | Your indexer API key |
-| `downloadDir` | Torrent cache directory |
+| `indexerApiKey` | API key (required when `indexerUrl` is set) |
+| `downloadDir` | Torrent download and transcode cache directory |
 
 ## Project Structure
 
 ```
 TrackTorr/
+├── config/                  # Runtime config (gitignored)
+│   ├── config.example.json
+│   └── config.json
+├── k8s/                     # Kubernetes manifests
+│   ├── namespace.yaml
+│   ├── configmap.yaml
+│   ├── pvc.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   └── kustomization.yaml
 ├── packages/
-│   ├── server/          # Node.js + Express backend
+│   ├── server/              # Node.js + Express backend
 │   │   └── src/
-│   │       ├── api/     # REST routes
-│   │       ├── torrent/ # WebTorrent engine + Go process manager
-│   │       └── indexer/ # Prowlarr/Jackett client
-│   ├── client/          # React + Vite frontend
+│   │       ├── index.ts     # Entry point
+│   │       ├── server.ts    # Express app factory
+│   │       ├── config.ts    # Config file loader
+│   │       ├── setup.ts     # Config path resolution
+│   │       ├── api/         # REST routes
+│   │       │   ├── torrents.ts
+│   │       │   ├── search.ts
+│   │       │   ├── stream.ts
+│   │       │   └── config.ts
+│   │       ├── torrent/
+│   │       │   └── engine.ts    # WebTorrent + Go process manager
+│   │       ├── indexer/
+│   │       │   └── client.ts    # Prowlarr/Jackett client
+│   │       └── types/
+│   │           └── index.ts
+│   ├── client/              # React + Vite frontend
+│   │   ├── index.html
+│   │   ├── public/
+│   │   │   └── trackIcon.svg
 │   │   └── src/
-│   │       ├── components/  # Player, Search, Settings, etc.
-│   │       └── api/        # HTTP client
-│   └── streamer/        # Go streaming engine (anacrolix/torrent)
+│   │       ├── main.tsx
+│   │       ├── App.tsx
+│   │       ├── api/
+│   │       │   └── client.ts    # HTTP client
+│   │       ├── components/
+│   │       │   ├── SearchBar.tsx
+│   │       │   ├── SearchResults.tsx
+│   │       │   ├── TorrentList.tsx
+│   │       │   ├── Player.tsx
+│   │       │   └── SettingsModal.tsx
+│   │       └── types/
+│   │           └── index.ts
+│   └── streamer/            # Go streaming engine (anacrolix/torrent)
 │       └── main.go
-├── k8s/                 # Kubernetes manifests
+├── dist/                    # Go binary output (build artifact)
 ├── Dockerfile
 ├── docker-compose.yml
-└── config/              # Runtime config (gitignored)
+└── package.json
 ```
 
 ## How It Works
 
 1. **Search** — queries your Prowlarr/Jackett instance, returns results in the UI
-2. **Add** — torrent is added to both WebTorrent (status/management) and Go engine (streaming) simultaneously
-3. **Stream** — browser requests the file, Go serves it via `http.ServeContent` with `SetResponsive()` piece prioritization
-4. **Transcode** — if ffprobe detects an unsupported audio codec (EAC3, AC3, DTS, DTS-HD, TrueHD), ffmpeg transcodes to AAC 2ch 128kbps on the fly. Result is cached to disk for subsequent requests.
+2. **Add** — torrent is added to both WebTorrent (status/management) and Go engine (streaming) simultaneously via stdin JSON commands
+3. **Probe** — when you click play, the browser calls a probe endpoint that runs `ffprobe` against the torrent file via a pipe to detect audio codecs. Unsupported codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) trigger the transcode path
+4. **Native stream** — for supported codecs, Node.js proxies the request to the Go process, which serves the file via `http.ServeContent` with `SetResponsive()` piece prioritization and 16 MB readahead
+5. **Transcode** — for unsupported audio, the Go process pipes the torrent reader through `ffmpeg` (`-c:v copy -c:a aac -ac 2 -ar 48000 -b:a 128k -movflags frag_keyframe+empty_moov+default_base_moof`), streaming the fragmented MP4 to the browser via `http.Flusher`. Output is written atomically to a cache file — repeat requests serve the cached file directly
+6. **Cleanup** — torrents idle for 60 seconds are dropped; the Go process emits a `dropped` message on stdout, and Node.js removes the torrent from the WebTorrent UI
 
-The Go binary runs as a subprocess of Node.js, communicating via stdin/stdout JSON commands.
+The Go binary runs as a persistent HTTP subprocess of Node.js. They communicate via newline-delimited JSON on stdin (commands) and stdout (status/dropped events). Logs and errors go to stderr.
 
 ## Inspiration
 
