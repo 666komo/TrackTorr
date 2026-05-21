@@ -16,10 +16,12 @@ RUN CGO_ENABLED=0 go build -o /dist/streamer .
 FROM node:22-alpine AS node-builder
 WORKDIR /build
 
+RUN apk add --no-cache python3 make g++ gcc
+
 COPY package.json package-lock.json ./
 COPY packages/client/package.json packages/client/
 COPY packages/server/package.json packages/server/
-RUN npm ci --ignore-scripts
+RUN npm ci
 
 COPY packages/server/tsconfig.json packages/server/
 COPY packages/server/src/ packages/server/src/

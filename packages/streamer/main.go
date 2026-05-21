@@ -287,6 +287,7 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 
 	cacheKey := fmt.Sprintf("%s_%d.mp4", infoHash, fileIndex)
 	cachePath := filepath.Join(transcodeCacheDir, cacheKey)
+	cacheTmp := cachePath + ".tmp"
 
 	// Serve from cache if available
 	if cached, err := os.Open(cachePath); err == nil {
@@ -312,10 +313,10 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 		"-c:v", "copy",
 		"-c:a", "aac",
 		"-ac", "2",
+		"-ar", "48000",
 		"-b:a", "128k",
 		"-sn",
 		"-movflags", "frag_keyframe+empty_moov+default_base_moof",
-		"-frag_duration", "10000000",
 		"-flush_packets", "1",
 		"-f", "mp4",
 		"pipe:1",
@@ -341,8 +342,9 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 
-	// Tee ffmpeg stdout to both HTTP response and a cache file
-	cacheFile, err := os.Create(cachePath)
+	// Tee ffmpeg stdout to both HTTP response and a temp cache file.
+	// On success the temp file is renamed to the final path (atomic commit).
+	cacheFile, err := os.Create(cacheTmp)
 	if err != nil {
 		log.Printf("[go] cache write error %s/%d: %v", infoHash[:12], fileIndex, err)
 	}
@@ -385,15 +387,29 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
+	completed := false
 	select {
 	case <-done:
+		completed = true
 	case <-r.Context().Done():
 		cmd.Process.Kill()
 		<-done
 	}
+
+	if completed && cacheFile != nil {
+		cacheFile.Sync()
+		cacheFile.Close()
+		cacheFile = nil
+		if err := os.Rename(cacheTmp, cachePath); err != nil {
+			log.Printf("[go] cache rename error %s/%d: %v", infoHash[:12], fileIndex, err)
+		}
+		log.Printf("[go] transcode cached %s/%d", infoHash[:12], fileIndex)
+	} else {
+		os.Remove(cacheTmp)
+	}
+
 	pipeR.Close()
 	pipeW.Close()
-
 	log.Printf("[go] transcode done %s/%d", infoHash[:12], fileIndex)
 }
 
