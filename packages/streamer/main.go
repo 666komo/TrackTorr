@@ -145,6 +145,7 @@ func main() {
 	// Stdin command handler
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Buffer(make([]byte, 0, 256<<10), 256<<10)
 		for scanner.Scan() {
 			line := scanner.Text()
 			var cmd command
@@ -203,9 +204,14 @@ func main() {
 				delete(readCnt, cmd.InfoHash)
 				tmMu.Unlock()
 				fmt.Fprintf(os.Stderr, `{"type":"status","message":"removed %s"}`+"\n", cmd.InfoHash[:12])
+			default:
+				fmt.Fprintf(os.Stderr, `{"type":"error","message":"unknown cmd: %s"}`+"\n", cmd.Cmd)
 			}
 		}
-		os.Exit(0)
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintf(os.Stderr, `{"type":"error","message":"stdin scanner: %v"}`+"\n", err)
+		}
+		fmt.Fprintf(os.Stderr, `{"type":"status","message":"stdin done"}`+"\n")
 	}()
 
 	sigCh := make(chan os.Signal, 1)
