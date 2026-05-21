@@ -5,6 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/trackIcon.svg" />
     <title>TrackTorr</title>
+    <style>
+      :root, [data-theme="light"] {
+        --bg: #fff;
+        --bg-card: #fff;
+        --bg-muted: #f5f5f5;
+        --bg-hover: #f0f0f0;
+        --bg-overlay: rgba(0,0,0,0.5);
+        --text: #111;
+        --text-secondary: #666;
+        --text-muted: #999;
+        --border: #e0e0e0;
+        --border-light: #ccc;
+        --primary: #0066cc;
+        --primary-hover: #0052a3;
+        --success: #22c55e;
+        --success-bg: #f0fdf4;
+        --danger: #cc0000;
+        --danger-hover: #a30000;
+        --warning: #fc3;
+        --warning-bg: #332;
+        --warning-text: #fc3;
+        --player-bg: #111;
+        --shadow: 0 2px 8px rgba(0,0,0,0.08);
+        --radius: 6px;
+        --radius-lg: 8px;
+      }
+      [data-theme="dark"] {
+        --bg: #1a1a2e;
+        --bg-card: #16213e;
+        --bg-muted: #1e1e3a;
+        --bg-hover: #252542;
+        --bg-overlay: rgba(0,0,0,0.7);
+        --text: #e0e0e0;
+        --text-secondary: #a0a0b0;
+        --text-muted: #6a6a7a;
+        --border: #2a2a4a;
+        --border-light: #3a3a5a;
+        --primary: #4d8cf0;
+        --primary-hover: #6ba3ff;
+        --success: #4ade80;
+        --success-bg: #1a3a2a;
+        --danger: #ff4444;
+        --danger-hover: #ff6666;
+        --warning: #fbbf24;
+        --warning-bg: #3a3a1a;
+        --warning-text: #fbbf24;
+        --player-bg: #0f0f23;
+        --shadow: 0 2px 8px rgba(0,0,0,0.3);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, sans-serif;
+        transition: background .2s, color .2s;
+      }
+      input, button, textarea, select {
+        font: inherit;
+      }
+      input {
+        background: var(--bg-card);
+        color: var(--text);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius);
+        outline: none;
+        transition: border-color .15s;
+      }
+      input:focus { border-color: var(--primary); }
+      button { transition: opacity .15s; }
+      button:hover { opacity: .85; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

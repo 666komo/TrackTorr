@@ -18,8 +18,11 @@ export default function SearchResults({ results, onAdd }: SearchResultsProps) {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <h3>Search Results ({results.length})</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: 'var(--text)' }}>
+        Search Results
+        <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({results.length})</span>
+      </h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {results.map((r, i) => (
           <div
             key={`${r.guid}-${i}`}
@@ -27,30 +30,37 @@ export default function SearchResults({ results, onAdd }: SearchResultsProps) {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              padding: '8px 12px',
-              border: '1px solid #e0e0e0',
-              borderRadius: 6,
+              padding: '10px 14px',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              background: 'var(--bg-card)',
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>
                 {r.title}
               </div>
-              <div style={{ fontSize: 12, color: '#666' }}>
-                {r.indexer} &middot; {formatSize(r.size)} &middot; S:{r.seeders} L:{r.leechers}
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                <span style={{ color: 'var(--primary)' }}>{r.indexer}</span>
+                {' \u00b7 '}{formatSize(r.size)}
+                {' \u00b7 '}
+                <span style={{ color: 'var(--success)' }}>S:{r.seeders}</span>
+                {' L:'}{r.leechers}
               </div>
             </div>
             {r.magnetUrl && (
               <button
                 onClick={() => onAdd(r.magnetUrl!)}
                 style={{
-                  padding: '4px 12px',
+                  padding: '6px 16px',
                   borderRadius: 4,
-                  border: '1px solid #0066cc',
+                  border: '1px solid var(--primary)',
                   background: 'transparent',
-                  color: '#0066cc',
+                  color: 'var(--primary)',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
+                  fontWeight: 500,
+                  fontSize: 13,
                 }}
               >
                 Add

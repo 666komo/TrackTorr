@@ -20,14 +20,29 @@ export default function SearchBar({ onSearch, searching }: SearchBarProps) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search torrents..."
-        style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc' }}
+        style={{
+          flex: 1,
+          padding: '10px 14px',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border-light)',
+          background: 'var(--bg-card)',
+          color: 'var(--text)',
+        }}
       />
       <button
         type="submit"
         disabled={searching}
-        style={{ padding: '8px 20px', borderRadius: 6, border: 'none', background: '#0066cc', color: '#fff', cursor: searching ? 'default' : 'pointer', opacity: searching ? 0.6 : 1 }}
+        style={{
+          padding: '10px 24px',
+          borderRadius: 'var(--radius)',
+          border: 'none',
+          background: searching ? 'var(--text-muted)' : 'var(--primary)',
+          color: '#fff',
+          cursor: searching ? 'default' : 'pointer',
+          fontWeight: 500,
+        }}
       >
-        {searching ? 'Searching...' : 'Search'}
+        {searching ? 'Searching\u2026' : 'Search'}
       </button>
     </form>
   )

@@ -15,7 +15,7 @@ function formatSpeed(bytes: number): string {
 }
 
 function formatDuration(ms: number | null): string {
-  if (ms === null || ms === Infinity) return '—'
+  if (ms === null || ms === Infinity) return '\u2014'
   const totalSec = Math.floor(ms / 1000)
   const h = Math.floor(totalSec / 3600)
   const m = Math.floor((totalSec % 3600) / 60)
@@ -25,62 +25,79 @@ function formatDuration(ms: number | null): string {
   return `${s}s`
 }
 
+function statusColor(status: string): string {
+  switch (status) {
+    case 'completed': return 'var(--success)'
+    case 'downloading': return 'var(--primary)'
+    case 'error': return 'var(--danger)'
+    default: return 'var(--text-muted)'
+  }
+}
+
 export default function TorrentList({ torrents, onRemove, onPlay }: TorrentListProps) {
   if (torrents.length === 0) {
     return (
-      <div style={{ color: '#999', marginTop: 24 }}>
-        No active torrents. Search and add one above.
+      <div style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 40, fontSize: 14, lineHeight: 1.6 }}>
+        No active torrents.
+        <br />
+        <span style={{ fontSize: 13 }}>Search and add one above.</span>
       </div>
     )
   }
 
   return (
     <div style={{ marginTop: 24 }}>
-      <h3>Active Torrents ({torrents.length})</h3>
+      <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: 'var(--text)' }}>
+        Active Torrents
+        <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({torrents.length})</span>
+      </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {torrents.map((t) => (
           <div
             key={t.infoHash}
             style={{
-              padding: '12px',
-              border: '1px solid #e0e0e0',
-              borderRadius: 6,
+              padding: '12px 14px',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              background: 'var(--bg-card)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', fontSize: 14 }}>
                 {t.name}
               </div>
               <button
                 onClick={() => onRemove(t.infoHash)}
                 style={{
                   marginLeft: 12,
-                  padding: '2px 8px',
+                  padding: '3px 10px',
                   borderRadius: 4,
-                  border: '1px solid #cc0000',
+                  border: '1px solid var(--danger)',
                   background: 'transparent',
-                  color: '#cc0000',
+                  color: 'var(--danger)',
                   cursor: 'pointer',
                   fontSize: 12,
+                  flexShrink: 0,
                 }}
               >
                 Remove
               </button>
             </div>
 
-            <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
-              DL: {formatSpeed(t.downloadSpeed)} &middot; UL: {formatSpeed(t.uploadSpeed)}
-              &middot; Peers: {t.peers}
-              &middot; ETA: {formatDuration(t.timeRemaining)}
-              &middot; {(t.progress * 100).toFixed(1)}%
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span>DL: {formatSpeed(t.downloadSpeed)}</span>
+              <span>UL: {formatSpeed(t.uploadSpeed)}</span>
+              <span>Peers: {t.peers}</span>
+              <span>ETA: {formatDuration(t.timeRemaining)}</span>
+              <span style={{ color: statusColor(t.status) }}>{(t.progress * 100).toFixed(1)}%</span>
             </div>
 
             <div
               style={{
                 height: 4,
-                background: '#e0e0e0',
+                background: 'var(--bg-muted)',
                 borderRadius: 2,
-                marginBottom: 8,
+                marginBottom: 10,
                 overflow: 'hidden',
               }}
             >
@@ -88,28 +105,28 @@ export default function TorrentList({ torrents, onRemove, onPlay }: TorrentListP
                 style={{
                   width: `${t.progress * 100}%`,
                   height: '100%',
-                  background: t.progress >= 1 ? '#22c55e' : '#0066cc',
+                  background: t.progress >= 1 ? 'var(--success)' : 'var(--primary)',
                   borderRadius: 2,
-                  transition: 'width 1s',
+                  transition: 'width 1s ease',
                 }}
               />
             </div>
 
             {t.files.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {t.files.map((f) => (
                   <button
                     key={f.index}
                     onClick={() => onPlay(t.infoHash, f.index, f.name)}
                     style={{
-                      padding: '2px 8px',
+                      padding: '3px 10px',
                       borderRadius: 4,
-                      border: '1px solid #22c55e',
+                      border: '1px solid var(--success)',
                       background: 'transparent',
-                      color: '#22c55e',
+                      color: 'var(--success)',
                       cursor: 'pointer',
                       fontSize: 11,
-                      maxWidth: 200,
+                      maxWidth: 220,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',

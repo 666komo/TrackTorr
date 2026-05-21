@@ -25,7 +25,6 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
   const videoExts = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v']
   const isVideo = videoExts.some((ext) => fileName.toLowerCase().endsWith(ext))
 
-  // Probe for codec support — determines which URL to use
   useEffect(() => {
     let cancelled = false
     fetch(api.probeUrl(infoHash, fileIndex))
@@ -33,9 +32,7 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
       .then((data: ProbeResult) => {
         if (cancelled) return
         if (!data.supported && data.has_eac3) {
-          setWarning(
-            'Unsupported audio codec detected — transcoding audio to AAC for browser playback.',
-          )
+          setWarning('Unsupported audio codec detected \u2014 transcoding audio to AAC for browser playback.')
           setUseTranscode(true)
         } else if (data.error) {
           console.warn('[probe]', data.error)
@@ -48,7 +45,6 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
     return () => { cancelled = true }
   }, [infoHash, fileIndex])
 
-  // Playback — starts once probe decides which URL to use
   useEffect(() => {
     if (useTranscode === null) return
     const el = isVideo ? videoRef.current : audioRef.current
@@ -97,25 +93,28 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
         bottom: 0,
         left: 0,
         right: 0,
-        background: '#111',
+        background: 'var(--player-bg)',
         padding: 12,
         zIndex: 100,
+        borderTop: '1px solid var(--border)',
       }}
     >
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ color: '#fff', fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 12 }}>
             {fileName}
           </span>
           <button
             onClick={onClose}
             style={{
-              padding: '2px 10px',
+              padding: '3px 12px',
               borderRadius: 4,
-              border: 'none',
-              background: '#333',
-              color: '#fff',
+              border: '1px solid #555',
+              background: 'transparent',
+              color: '#ccc',
               cursor: 'pointer',
+              fontSize: 12,
+              flexShrink: 0,
             }}
           >
             Close
@@ -124,24 +123,24 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
 
         {useTranscode === null && (
           <div style={{ color: '#999', fontSize: 13, textAlign: 'center', marginBottom: 4 }}>
-            Probing stream...
+            Probing stream\u2026
           </div>
         )}
 
         {warning && useTranscode !== null && (
-          <div style={{ color: '#fc3', fontSize: 13, textAlign: 'center', marginBottom: 4, padding: '4px 8px', background: '#332', borderRadius: 4 }}>
-            ⚠ {warning}
+          <div style={{ color: 'var(--warning-text)', fontSize: 12, textAlign: 'center', marginBottom: 4, padding: '4px 8px', background: 'var(--warning-bg)', borderRadius: 4 }}>
+            {'\u26A0'} {warning}
           </div>
         )}
 
         {useTranscode !== null && buffering && !error && (
           <div style={{ color: '#999', fontSize: 13, textAlign: 'center', marginBottom: 4 }}>
-            Buffering...
+            Buffering\u2026
           </div>
         )}
 
         {error && (
-          <div style={{ color: '#f99', fontSize: 13, textAlign: 'center', marginBottom: 4 }}>
+          <div style={{ color: '#f99', fontSize: 12, textAlign: 'center', marginBottom: 4, padding: '4px 8px', background: 'rgba(255,0,0,0.1)', borderRadius: 4 }}>
             {error}
           </div>
         )}
@@ -150,7 +149,7 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
           <video
             ref={videoRef}
             controls
-            style={{ width: '100%', maxHeight: 400, borderRadius: 6 }}
+            style={{ width: '100%', maxHeight: 400, borderRadius: 'var(--radius)' }}
           />
         ) : (
           <audio
