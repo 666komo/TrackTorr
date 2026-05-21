@@ -25,6 +25,17 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 - **Build tools** — `python3`, `make`, `g++`, `gcc` (build only — native addon compilation)
 - **Prowlarr** or **Jackett** (indexer — optional, search still works without)
 
+## How It Works
+
+1. **Search** — queries your Prowlarr/Jackett instance, returns results in the UI
+2. **Add** — torrent is added to both WebTorrent (status/management) and Go engine (streaming) simultaneously via stdin JSON commands
+3. **Probe** — when you click play, the browser calls a probe endpoint that runs `ffprobe` against the torrent file via a pipe to detect audio codecs. Unsupported codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) trigger the transcode path
+4. **Native stream** — for supported codecs, Node.js proxies the request to the Go process, which serves the file via `http.ServeContent` with `SetResponsive()` piece prioritization and 16 MB readahead
+5. **Transcode** — for unsupported audio, the Go process pipes the torrent reader through `ffmpeg` (`-c:v copy -c:a aac -ac 2 -ar 48000 -b:a 128k -movflags frag_keyframe+empty_moov+default_base_moof`), streaming the fragmented MP4 to the browser via `http.Flusher`. Output is written atomically to a cache file — repeat requests serve the cached file directly
+6. **Cleanup** — torrents idle for 60 seconds are dropped; the Go process emits a `dropped` message on stdout, and Node.js removes the torrent from the WebTorrent UI
+
+The Go binary runs as a persistent HTTP subprocess of Node.js. They communicate via newline-delimited JSON on stdin (commands) and stdout (status/dropped events). Logs and errors go to stderr.
+
 ## Quick Start
 
 ### Bare Metal (Arch Linux)
@@ -159,17 +170,6 @@ TrackTorr/
 ├── docker-compose.yml
 └── package.json
 ```
-
-## How It Works
-
-1. **Search** — queries your Prowlarr/Jackett instance, returns results in the UI
-2. **Add** — torrent is added to both WebTorrent (status/management) and Go engine (streaming) simultaneously via stdin JSON commands
-3. **Probe** — when you click play, the browser calls a probe endpoint that runs `ffprobe` against the torrent file via a pipe to detect audio codecs. Unsupported codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) trigger the transcode path
-4. **Native stream** — for supported codecs, Node.js proxies the request to the Go process, which serves the file via `http.ServeContent` with `SetResponsive()` piece prioritization and 16 MB readahead
-5. **Transcode** — for unsupported audio, the Go process pipes the torrent reader through `ffmpeg` (`-c:v copy -c:a aac -ac 2 -ar 48000 -b:a 128k -movflags frag_keyframe+empty_moov+default_base_moof`), streaming the fragmented MP4 to the browser via `http.Flusher`. Output is written atomically to a cache file — repeat requests serve the cached file directly
-6. **Cleanup** — torrents idle for 60 seconds are dropped; the Go process emits a `dropped` message on stdout, and Node.js removes the torrent from the WebTorrent UI
-
-The Go binary runs as a persistent HTTP subprocess of Node.js. They communicate via newline-delimited JSON on stdin (commands) and stdout (status/dropped events). Logs and errors go to stderr.
 
 ## Inspiration
 
