@@ -14,6 +14,8 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 - **Stream** MKV/MP4/AVI/MOV directly in browser via `<video>` element
 - **Codec detection** — detects unsupported audio codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) with ffprobe, transcodes to AAC 2ch 128kbps on the fly via ffmpeg
 - **Dual engine** — WebTorrent (management) + Go anacrolix/torrent (streaming) for reliable piece prioritization
+- **Audio & subtitle selection** — select language tracks from any detected audio/subtitle streams before playback
+- **Per-file management** — add torrents once, then select/deselect individual files from the torrent list; deselected files are not downloaded
 - **Transcode cache** — once transcoded, output is saved atomically to disk and served directly on repeat requests — no re-encode
 
 ## Dependencies
@@ -29,10 +31,15 @@ Torrent streaming server with web UI and Prowlarr/Jackett indexer integration. S
 
 1. **Search** — queries your Prowlarr/Jackett instance, returns results in the UI
 2. **Add** — torrent is added to both WebTorrent (status/management) and Go engine (streaming) simultaneously via stdin JSON commands
-3. **Probe** — when you click play, the browser calls a probe endpoint that runs `ffprobe` against the torrent file via a pipe to detect audio codecs. Unsupported codecs (EAC3, AC3, DTS, DTS-HD, TrueHD) trigger the transcode path
-4. **Native stream** — for supported codecs, Node.js proxies the request to the Go process, which serves the file via `http.ServeContent` with `SetResponsive()` piece prioritization and 16 MB readahead
-5. **Transcode** — for unsupported audio, the Go process pipes the torrent reader through `ffmpeg` (`-c:v copy -c:a aac -ac 2 -ar 48000 -b:a 128k -movflags frag_keyframe+empty_moov+default_base_moof`), streaming the fragmented MP4 to the browser via `http.Flusher`. Output is written atomically to a cache file — repeat requests serve the cached file directly
-6. **Cleanup** — torrents idle for 60 seconds are dropped; the Go process emits a `dropped` message on stdout, and Node.js removes the torrent from the WebTorrent UI
+3. **Probe** — when you click play, the browser calls a probe endpoint that runs `ffprobe` against the torrent file via a pipe. Returns detected video codecs, audio streams (index/codec/language/title), and subtitle streams (index/codec/language/title)
+4. **Stream** — always transcodes via ffmpeg:
+   - Video: HEVC passthrough (`-c:v copy`) — browsers with native HEVC decode play it directly
+   - Audio: re-encodes unsupported codecs to AAC 2ch 128kbps; supported codecs also pass through
+   - Subtitle: optional stream selection embeds `mov_text` in the MP4 output, or serves a separate WebVTT endpoint
+   - Always serves fragmented MP4 with `frag_keyframe+empty_moov+default_base_moof` for instant playback
+5. **Transcode cache** — output is written atomically to disk on the first transcode; repeat requests serve the cached file directly
+6. **Audio/subtitle switching** — changing tracks on the player triggers a new transcode with different `-map` indices; the video reloads with the new selection
+7. **Cleanup** — torrents idle for 60 seconds are dropped; the Go process emits a `dropped` message on stdout, and Node.js removes the torrent from the WebTorrent UI
 
 The Go binary runs as a persistent HTTP subprocess of Node.js. They communicate via newline-delimited JSON on stdin (commands) and stdout (status/dropped events). Logs and errors go to stderr.
 
@@ -170,6 +177,10 @@ TrackTorr/
 ├── docker-compose.yml
 └── package.json
 ```
+
+## Known Issues
+
+- **HEVC source corruption** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). With `-c:v copy`, the browser's HEVC decoder waits for the first valid keyframe, causing a ~5s video pause while audio plays. After the keyframe arrives, A/V sync is correct. This is a source-level issue — the corrupted frames cannot be recovered by ffmpeg or the browser decoder.
 
 ## Inspiration
 

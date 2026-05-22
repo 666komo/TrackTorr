@@ -37,12 +37,17 @@ export interface TorrentFile {
   length: number
   index: number
   streamUrl?: string
+  selected?: boolean
 }
 
 export interface AddTorrentRequest {
   magnet?: string
   infoHash?: string
   file?: string
+}
+
+export interface SelectFilesRequest {
+  files: number[]
 }
 
 export interface SearchQuery {

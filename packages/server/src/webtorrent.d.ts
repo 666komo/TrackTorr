@@ -19,6 +19,7 @@ declare module 'webtorrent' {
     progress: number
     createReadStream(opts?: { start?: number; end?: number }): NodeJS.ReadableStream
     select(priority?: number): void
+    deselect(): void
   }
 
   interface Torrent {
@@ -35,6 +36,8 @@ declare module 'webtorrent' {
     timeRemaining: number
     received: number
     destroy(): void
+    pause(): void
+    resume(): void
     on(event: 'ready', listener: () => void): this
     on(event: 'error', listener: (err: Error) => void): this
     on(event: 'download', listener: (bytes: number) => void): this

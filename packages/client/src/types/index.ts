@@ -32,6 +32,37 @@ export interface TorrentFile {
   index: number
   downloaded: number
   streamable: boolean
+  selected: boolean
+}
+
+export interface ProbeStream {
+  index: number
+  codec_type: string
+  codec_name: string
+  tags?: { language?: string; title?: string }
+}
+
+export interface ProbeAudioStream {
+  index: number
+  codec: string
+  language: string
+  title?: string
+}
+
+export interface ProbeSubtitleStream {
+  index: number
+  codec: string
+  language: string
+  title?: string
+}
+
+export interface ProbeResult {
+  streams: ProbeStream[]
+  audio: ProbeAudioStream[]
+  subtitles: ProbeSubtitleStream[]
+  has_eac3: boolean
+  supported: boolean
+  error?: string
 }
 
 export interface AppConfig {

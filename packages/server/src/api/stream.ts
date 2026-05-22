@@ -130,18 +130,18 @@ export function createStreamRouter(engine: TorrentEngine): Router {
       return
     }
     console.log(`[stream] transcode request: ${infoHash.slice(0,12)}/${fileIndex}`)
-    const goReq = http.get(
-      `http://127.0.0.1:${port}/stream/${infoHash}/${fileIndex}?transcode=1`,
-      { agent: keepAliveAgent },
-      (goRes) => {
-        res.writeHead(goRes.statusCode!, {
-          'Content-Type': goRes.headers['content-type'] || 'video/mp4',
-          'Cache-Control': goRes.headers['cache-control'] || 'no-store',
-        })
-        goRes.pipe(res)
-        res.on('close', () => goReq.destroy())
-      },
-    )
+    const goParams = new URLSearchParams({ transcode: '1' })
+    if (req.query.audio_index) goParams.set('audio_index', req.query.audio_index as string)
+    if (req.query.subtitle_index) goParams.set('subtitle_index', req.query.subtitle_index as string)
+    const goUrl = `http://127.0.0.1:${port}/stream/${infoHash}/${fileIndex}?${goParams}`
+    const goReq = http.get(goUrl, { agent: keepAliveAgent }, (goRes) => {
+      res.writeHead(goRes.statusCode!, {
+        'Content-Type': goRes.headers['content-type'] || 'video/mp4',
+        'Cache-Control': goRes.headers['cache-control'] || 'no-store',
+      })
+      goRes.pipe(res)
+      res.on('close', () => goReq.destroy())
+    })
     goReq.on('error', () => { if (!res.headersSent) res.status(502).json({ error: 'Transcode failed' }) })
     goReq.end()
   })
@@ -192,6 +192,34 @@ export function createStreamRouter(engine: TorrentEngine): Router {
       },
     )
     goReq.on('error', () => res.status(502).json({ error: 'Probe failed' }))
+    goReq.end()
+  })
+
+  router.get('/subtitle/:infoHash/:fileIndex', async (req, res) => {
+    const { infoHash, fileIndex } = req.params
+    const subIdx = req.query.subtitle_index as string
+    if (!subIdx) {
+      res.status(400).json({ error: 'missing subtitle_index' })
+      return
+    }
+    const port = engine.goStreamerPort
+    if (!port) {
+      res.status(503).json({ error: 'Streamer not available' })
+      return
+    }
+    const goReq = http.get(
+      `http://127.0.0.1:${port}/subtitle/${infoHash}/${fileIndex}?subtitle_index=${subIdx}`,
+      { agent: keepAliveAgent },
+      (goRes) => {
+        res.writeHead(goRes.statusCode!, {
+          'Content-Type': 'text/vtt; charset=utf-8',
+          'Cache-Control': goRes.headers['cache-control'] || 'no-store',
+        })
+        goRes.pipe(res)
+        res.on('close', () => goReq.destroy())
+      },
+    )
+    goReq.on('error', () => { if (!res.headersSent) res.status(502).json({ error: 'Subtitle failed' }) })
     goReq.end()
   })
 

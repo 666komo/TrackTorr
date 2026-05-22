@@ -1,4 +1,4 @@
-import type { AppConfig, IndexerResult, TorrentStatus } from '../types'
+import type { AppConfig, IndexerResult, TorrentStatus, ProbeResult } from '../types'
 
 const BASE = '/api'
 
@@ -54,6 +54,20 @@ export const api = {
   removeTorrent: (infoHash: string) =>
     fetchJson<{ success: boolean }>(`/torrents/${infoHash}`, { method: 'DELETE' }),
 
+  selectFiles: (infoHash: string, files: number[]) =>
+    fetchJson<{ success: boolean }>(`/torrents/${infoHash}/select`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files }),
+    }),
+
+  deselectFiles: (infoHash: string, files: number[]) =>
+    fetchJson<{ success: boolean }>(`/torrents/${infoHash}/deselect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files }),
+    }),
+
   getConfig: () => fetchJson<AppConfig>('/config'),
 
   saveConfig: (config: AppConfig) =>
@@ -66,11 +80,23 @@ export const api = {
   streamUrl: (infoHash: string, fileIndex: number) =>
     `${BASE}/stream/${infoHash}/${fileIndex}`,
 
-  transcodeUrl: (infoHash: string, fileIndex: number) =>
-    `${BASE}/stream/transcode/${infoHash}/${fileIndex}`,
+  transcodeUrl: (infoHash: string, fileIndex: number, audioIndex?: number, subtitleIndex?: number) => {
+    let url = `${BASE}/stream/transcode/${infoHash}/${fileIndex}`
+    const params: string[] = []
+    if (audioIndex !== undefined) params.push(`audio_index=${audioIndex}`)
+    if (subtitleIndex !== undefined) params.push(`subtitle_index=${subtitleIndex}`)
+    if (params.length > 0) url += '?' + params.join('&')
+    return url
+  },
+
+  subtitleUrl: (infoHash: string, fileIndex: number, subtitleIndex: number) =>
+    `${BASE}/stream/subtitle/${infoHash}/${fileIndex}?subtitle_index=${subtitleIndex}`,
 
   probeUrl: (infoHash: string, fileIndex: number) =>
     `${BASE}/stream/probe/${infoHash}/${fileIndex}`,
+
+  probe: (infoHash: string, fileIndex: number) =>
+    fetchJson<ProbeResult>(`/stream/probe/${infoHash}/${fileIndex}`),
 
   flushCache: () =>
     fetchJson<{ success: boolean; message: string }>('/maintenance/flush-cache', { method: 'POST' }),

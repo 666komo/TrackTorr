@@ -20,6 +20,7 @@ export class TorrentEngine {
   private goProcess: any = null
   private goReady = false
   private torrentSources = new Map<string, { type: 'magnet' | 'torrent' | 'infohash'; data: string }>()
+  private selectedFiles = new Map<string, Set<number>>()
 
   constructor(downloadDir: string) {
     this.downloadDir = downloadDir
@@ -119,12 +120,21 @@ export class TorrentEngine {
     }
   }
 
+  private deselectAllWebTorrentFiles(torrent: any): void {
+    for (const file of torrent.files) {
+      file.deselect()
+    }
+  }
+
   addMagnet(magnet: string): Promise<{ infoHash: string; name: string }> {
     this.sendGoCommand({ cmd: 'add_magnet', uri: magnet })
     return new Promise((resolve, reject) => {
       const torrent = this.client.add(magnet, { path: this.downloadDir })
       torrent.on('ready', () => {
         this.torrentSources.set(torrent.infoHash, { type: 'magnet', data: magnet })
+        this.deselectAllWebTorrentFiles(torrent)
+        torrent.pause()
+        this.selectedFiles.set(torrent.infoHash, new Set())
         resolve({ infoHash: torrent.infoHash, name: torrent.name })
       })
       torrent.on('error', (err: Error) => reject(err))
@@ -137,7 +147,12 @@ export class TorrentEngine {
     this.torrentSources.set(infoHash, { type: 'infohash', data: infoHash })
     return new Promise((resolve, reject) => {
       const torrent = this.client.add(infoHash, { path: this.downloadDir })
-      torrent.on('ready', () => resolve({ infoHash: torrent.infoHash, name: torrent.name }))
+      torrent.on('ready', () => {
+        this.deselectAllWebTorrentFiles(torrent)
+        torrent.pause()
+        this.selectedFiles.set(torrent.infoHash, new Set())
+        resolve({ infoHash: torrent.infoHash, name: torrent.name })
+      })
       torrent.on('error', (err: Error) => reject(err))
     })
   }
@@ -149,16 +164,57 @@ export class TorrentEngine {
       const torrent = this.client.add(buffer, { path: this.downloadDir })
       torrent.on('ready', () => {
         this.torrentSources.set(torrent.infoHash, { type: 'torrent', data: b64 })
+        this.deselectAllWebTorrentFiles(torrent)
+        torrent.pause()
+        this.selectedFiles.set(torrent.infoHash, new Set())
         resolve({ infoHash: torrent.infoHash, name: torrent.name })
       })
       torrent.on('error', (err: Error) => reject(err))
     })
   }
 
+  selectFiles(infoHash: string, fileIndices: number[]): void {
+    const torrent = this.getRawTorrent(infoHash)
+    if (!torrent) return
+
+    this.deselectAllWebTorrentFiles(torrent)
+    const selected = new Set<number>()
+    for (const idx of fileIndices) {
+      const file = torrent.files[idx]
+      if (file) {
+        file.select()
+        selected.add(idx)
+      }
+    }
+    this.selectedFiles.set(infoHash, selected)
+    torrent.resume()
+    this.sendGoCommand({ cmd: 'select_files', infoHash, fileIndices })
+  }
+
+  deselectFiles(infoHash: string, fileIndices: number[]): void {
+    const torrent = this.getRawTorrent(infoHash)
+    if (!torrent) return
+
+    const selected = this.selectedFiles.get(infoHash) || new Set()
+    for (const idx of fileIndices) {
+      const file = torrent.files[idx]
+      if (file) {
+        file.deselect()
+        selected.delete(idx)
+      }
+    }
+    this.selectedFiles.set(infoHash, selected)
+    if (selected.size === 0) {
+      torrent.pause()
+    }
+    this.sendGoCommand({ cmd: 'select_files', infoHash, fileIndices: Array.from(selected) })
+  }
+
   remove(infoHash: string): void {
     this.stopPreload(infoHash)
     this.sendGoCommand({ cmd: 'remove', infoHash })
     this.torrentSources.delete(infoHash)
+    this.selectedFiles.delete(infoHash)
     const torrent = this.client.get(infoHash)
     if (torrent) {
       this.client.remove(infoHash)
@@ -229,6 +285,7 @@ export class TorrentEngine {
       status.status = 'downloading'
     }
 
+    const selected = this.selectedFiles.get(torrent.infoHash) || new Set()
     status.files = torrent.files.map((f, i) => ({
       name: f.name,
       path: f.path,
@@ -236,6 +293,7 @@ export class TorrentEngine {
       index: i,
       downloaded: f.downloaded,
       streamable: f.downloaded > 0,
+      selected: selected.has(i),
     }))
 
     return status

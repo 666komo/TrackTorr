@@ -29,11 +29,12 @@ import (
 )
 
 type command struct {
-	Cmd      string `json:"cmd"`
-	Data     string `json:"data,omitempty"`
-	InfoHash string `json:"infoHash,omitempty"`
-	Type     string `json:"type,omitempty"`
-	URI      string `json:"uri,omitempty"`
+	Cmd         string   `json:"cmd"`
+	Data        string   `json:"data,omitempty"`
+	InfoHash    string   `json:"infoHash,omitempty"`
+	Type        string   `json:"type,omitempty"`
+	URI         string   `json:"uri,omitempty"`
+	FileIndices []int    `json:"fileIndices,omitempty"`
 }
 
 var transcodeCacheDir string
@@ -132,6 +133,9 @@ func main() {
 	mux.HandleFunc("/probe/", func(w http.ResponseWriter, r *http.Request) {
 		handleProbe(w, r, client)
 	})
+	mux.HandleFunc("/subtitle/", func(w http.ResponseWriter, r *http.Request) {
+		handleSubtitle(w, r, client)
+	})
 
 	server := &http.Server{Handler: mux}
 	go server.Serve(listener)
@@ -145,7 +149,7 @@ func main() {
 	// Stdin command handler
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Buffer(make([]byte, 0, 256<<10), 256<<10)
+		scanner.Buffer(make([]byte, 0, 4<<20), 4<<20)
 		for scanner.Scan() {
 			line := scanner.Text()
 			var cmd command
@@ -172,6 +176,9 @@ func main() {
 				}
 				go func() {
 					<-t.GotInfo()
+					for _, f := range t.Files() {
+						f.SetPriority(torrent.PiecePriorityNone)
+					}
 					fmt.Fprintf(os.Stderr, `{"type":"status","message":"added %s"}`+"\n", t.InfoHash().HexString()[:12])
 				}()
 			case "add_magnet":
@@ -190,20 +197,44 @@ func main() {
 				}
 				go func() {
 					<-t.GotInfo()
+					for _, f := range t.Files() {
+						f.SetPriority(torrent.PiecePriorityNone)
+					}
 					fmt.Fprintf(os.Stderr, `{"type":"status","message":"added magnet %s"}`+"\n", t.InfoHash().HexString()[:12])
 				}()
-			case "remove":
-				for _, t := range client.Torrents() {
-					if strings.EqualFold(t.InfoHash().HexString(), cmd.InfoHash) {
-						t.Drop()
-						break
+		case "select_files":
+			for _, t := range client.Torrents() {
+				if strings.EqualFold(t.InfoHash().HexString(), cmd.InfoHash) {
+					<-t.GotInfo()
+					files := t.Files()
+					for _, f := range files {
+						f.SetPriority(torrent.PiecePriorityNone)
 					}
+					selected := map[int]bool{}
+					for _, idx := range cmd.FileIndices {
+						if idx >= 0 && idx < len(files) {
+							selected[idx] = true
+						}
+					}
+					for idx := range selected {
+						files[idx].SetPriority(torrent.PiecePriorityNormal)
+					}
+					fmt.Fprintf(os.Stderr, `{"type":"status","message":"selected %d files for %s"}`+"\n", len(cmd.FileIndices), cmd.InfoHash[:12])
+					break
 				}
-				tmMu.Lock()
-				delete(lastUsed, cmd.InfoHash)
-				delete(readCnt, cmd.InfoHash)
-				tmMu.Unlock()
-				fmt.Fprintf(os.Stderr, `{"type":"status","message":"removed %s"}`+"\n", cmd.InfoHash[:12])
+			}
+		case "remove":
+			for _, t := range client.Torrents() {
+				if strings.EqualFold(t.InfoHash().HexString(), cmd.InfoHash) {
+					t.Drop()
+					break
+				}
+			}
+			tmMu.Lock()
+			delete(lastUsed, cmd.InfoHash)
+			delete(readCnt, cmd.InfoHash)
+			tmMu.Unlock()
+			fmt.Fprintf(os.Stderr, `{"type":"status","message":"removed %s"}`+"\n", cmd.InfoHash[:12])
 			default:
 				fmt.Fprintf(os.Stderr, `{"type":"error","message":"unknown cmd: %s"}`+"\n", cmd.Cmd)
 			}
@@ -287,11 +318,31 @@ func handleStream(w http.ResponseWriter, r *http.Request, client *torrent.Client
 func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File, infoHash string, fileIndex int) {
 	log.Printf("[go] transcode %s/%d", infoHash[:12], fileIndex)
 
+	audioIdx := -1
+	subIdx := -1
+	if a := r.URL.Query().Get("audio_index"); a != "" {
+		if v, err := strconv.Atoi(a); err == nil {
+			audioIdx = v
+		}
+	}
+	if s := r.URL.Query().Get("subtitle_index"); s != "" {
+		if v, err := strconv.Atoi(s); err == nil {
+			subIdx = v
+		}
+	}
+
 	touchTorrent(infoHash)
 	addReader(infoHash)
 	defer doneReader(infoHash)
 
-	cacheKey := fmt.Sprintf("%s_%d.mp4", infoHash, fileIndex)
+	cacheKey := fmt.Sprintf("%s_%d", infoHash, fileIndex)
+	if audioIdx >= 0 {
+		cacheKey += fmt.Sprintf("_a%d", audioIdx)
+	}
+	if subIdx >= 0 {
+		cacheKey += fmt.Sprintf("_s%d", subIdx)
+	}
+	cacheKey += ".mp4"
 	cachePath := filepath.Join(transcodeCacheDir, cacheKey)
 	cacheTmp := cachePath + ".tmp"
 
@@ -313,20 +364,39 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	reader.SetReadahead(32 << 20)
 	defer reader.Close()
 
-	cmd := exec.Command("ffmpeg",
+	ffArgs := []string{
 		"-fflags", "nobuffer",
 		"-i", "pipe:0",
+		"-map", "0:v:0",
+	}
+	if audioIdx >= 0 {
+		ffArgs = append(ffArgs, "-map", fmt.Sprintf("0:%d", audioIdx))
+	} else {
+		ffArgs = append(ffArgs, "-map", "0:a:0")
+	}
+	if subIdx >= 0 {
+		ffArgs = append(ffArgs, "-map", fmt.Sprintf("0:%d", subIdx))
+	}
+	ffArgs = append(ffArgs,
 		"-c:v", "copy",
+		"-af", "asetpts=PTS-STARTPTS",
 		"-c:a", "aac",
 		"-ac", "2",
 		"-ar", "48000",
 		"-b:a", "128k",
-		"-sn",
+	)
+	if subIdx >= 0 {
+		ffArgs = append(ffArgs, "-c:s", "mov_text")
+	} else {
+		ffArgs = append(ffArgs, "-sn")
+	}
+	ffArgs = append(ffArgs,
 		"-movflags", "frag_keyframe+empty_moov+default_base_moof",
-		"-flush_packets", "1",
 		"-f", "mp4",
 		"pipe:1",
 	)
+
+	cmd := exec.Command("ffmpeg", ffArgs...)
 	cmd.Stdin = reader
 
 	stderr, err := cmd.StderrPipe()
@@ -344,10 +414,6 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 		}
 	}()
 
-	w.Header().Set("Content-Type", "video/mp4")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-
 	// Tee ffmpeg stdout to both HTTP response and a temp cache file.
 	// On success the temp file is renamed to the final path (atomic commit).
 	cacheFile, err := os.Create(cacheTmp)
@@ -364,6 +430,10 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	if cacheFile != nil {
 		stdout = io.MultiWriter(pipeW, cacheFile)
 	}
+	w.Header().Set("Content-Type", "video/mp4")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+
 	cmd.Stdout = stdout
 
 	go func() {
@@ -421,17 +491,117 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 
 // --- ffprobe ---
 
+type ffprobeTags struct {
+	Language string `json:"language"`
+	Title    string `json:"title"`
+}
+
 type probeStream struct {
-	Index     int    `json:"index"`
-	CodecType string `json:"codec_type"`
-	CodecName string `json:"codec_name"`
+	Index     int        `json:"index"`
+	CodecType string     `json:"codec_type"`
+	CodecName string     `json:"codec_name"`
+	Tags      ffprobeTags `json:"tags,omitempty"`
+}
+
+type probeAudioStream struct {
+	Index    int    `json:"index"`
+	Codec    string `json:"codec"`
+	Language string `json:"language"`
+	Title    string `json:"title,omitempty"`
+}
+
+type probeSubtitleStream struct {
+	Index    int    `json:"index"`
+	Codec    string `json:"codec"`
+	Language string `json:"language"`
+	Title    string `json:"title,omitempty"`
 }
 
 type probeResult struct {
-	Streams   []probeStream `json:"streams"`
-	HasEac3   bool          `json:"has_eac3"`
-	Supported bool          `json:"supported"`
-	Error     string        `json:"error,omitempty"`
+	Streams   []probeStream       `json:"streams"`
+	Audio     []probeAudioStream  `json:"audio"`
+	Subtitles []probeSubtitleStream `json:"subtitles"`
+	HasEac3   bool                `json:"has_eac3"`
+	Supported bool                `json:"supported"`
+	Error     string              `json:"error,omitempty"`
+}
+
+func handleSubtitle(w http.ResponseWriter, r *http.Request, client *torrent.Client) {
+	parts := strings.SplitN(strings.TrimPrefix(r.URL.Path, "/subtitle/"), "/", 2)
+	if len(parts) != 2 {
+		http.Error(w, "bad path", http.StatusBadRequest)
+		return
+	}
+	infoHash := parts[0]
+	fileIndex, err := strconv.Atoi(parts[1])
+	if err != nil {
+		http.Error(w, "bad file index", http.StatusBadRequest)
+		return
+	}
+
+	subIdxStr := r.URL.Query().Get("subtitle_index")
+	if subIdxStr == "" {
+		http.Error(w, "missing subtitle_index", http.StatusBadRequest)
+		return
+	}
+	subIdx, err := strconv.Atoi(subIdxStr)
+	if err != nil {
+		http.Error(w, "bad subtitle_index", http.StatusBadRequest)
+		return
+	}
+
+	var t *torrent.Torrent
+	for _, tt := range client.Torrents() {
+		if strings.EqualFold(tt.InfoHash().HexString(), infoHash) {
+			t = tt
+			break
+		}
+	}
+	if t == nil {
+		http.Error(w, "torrent not found", http.StatusNotFound)
+		return
+	}
+	<-t.GotInfo()
+
+	files := t.Files()
+	if fileIndex < 0 || fileIndex >= len(files) {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+	file := files[fileIndex]
+
+	touchTorrent(infoHash)
+	addReader(infoHash)
+	defer doneReader(infoHash)
+
+	reader := file.NewReader()
+	reader.SetResponsive()
+	reader.SetReadahead(1 << 20)
+	defer reader.Close()
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "ffmpeg",
+		"-fflags", "nobuffer",
+		"-i", "pipe:0",
+		"-map", fmt.Sprintf("0:%d", subIdx),
+		"-f", "webvtt",
+		"pipe:1",
+	)
+	cmd.Stdin = reader
+	cmd.Stdout = w
+	cmd.Stderr = os.Stderr
+
+	w.Header().Set("Content-Type", "text/vtt; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+
+	if err := cmd.Run(); err != nil {
+		if !strings.Contains(err.Error(), "signal: killed") {
+			log.Printf("[go] subtitle ffmpeg error: %v", err)
+		}
+	}
 }
 
 var unsupportedAudio = map[string]string{
@@ -511,17 +681,33 @@ func runProbe(file *torrent.File) probeResult {
 	}
 
 	hasEac3 := false
+	var audio []probeAudioStream
+	var subs []probeSubtitleStream
 	for _, s := range raw.Streams {
 		if s.CodecType == "audio" {
 			if _, ok := unsupportedAudio[s.CodecName]; ok {
 				hasEac3 = true
-				break
 			}
+			audio = append(audio, probeAudioStream{
+				Index:    s.Index,
+				Codec:    s.CodecName,
+				Language: s.Tags.Language,
+				Title:    s.Tags.Title,
+			})
+		} else if s.CodecType == "subtitle" {
+			subs = append(subs, probeSubtitleStream{
+				Index:    s.Index,
+				Codec:    s.CodecName,
+				Language: s.Tags.Language,
+				Title:    s.Tags.Title,
+			})
 		}
 	}
 
 	return probeResult{
 		Streams:   raw.Streams,
+		Audio:     audio,
+		Subtitles: subs,
 		HasEac3:   hasEac3,
 		Supported: !hasEac3,
 	}
@@ -558,6 +744,60 @@ func startPreload(ctx context.Context, file *torrent.File) {
 		}
 		log.Printf("[go] preloaded %d bytes from end", total)
 	}()
+}
+
+// Preload the beginning of a file so ffmpeg has data immediately.
+func startPreloadStart(ctx context.Context, file *torrent.File) {
+	preloadSize := int64(8 << 20) // 8 MB from start
+	if preloadSize > file.Length() {
+		preloadSize = file.Length()
+	}
+	go func() {
+		pr := file.NewReader()
+		defer pr.Close()
+		pr.SetResponsive()
+		pr.SetReadahead(0)
+		tmp := make([]byte, 32<<10)
+		total := int64(0)
+		for total < preloadSize {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			n, err := pr.Read(tmp)
+			if err != nil {
+				return
+			}
+			total += int64(n)
+		}
+		log.Printf("[go] preloaded %d bytes from start", total)
+	}()
+}
+
+// waitForData blocks until at least one byte is readable from the file, up to the given timeout.
+func waitForData(ctx context.Context, file *torrent.File, timeout time.Duration) bool {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	pr := file.NewReader()
+	defer pr.Close()
+	pr.SetResponsive()
+	pr.SetReadahead(0)
+	one := make([]byte, 1)
+	for {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+		n, err := pr.Read(one)
+		if n > 0 {
+			return true
+		}
+		if err != nil {
+			return false
+		}
+	}
 }
 
 func cleanupLoop(client *torrent.Client) {

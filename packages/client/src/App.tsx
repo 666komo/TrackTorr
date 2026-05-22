@@ -71,6 +71,16 @@ export default function App() {
     await loadTorrents()
   }, [loadTorrents])
 
+  const handleSelectFiles = useCallback(async (infoHash: string, files: number[]) => {
+    await api.selectFiles(infoHash, files)
+    await loadTorrents()
+  }, [loadTorrents])
+
+  const handleDeselectFiles = useCallback(async (infoHash: string, files: number[]) => {
+    await api.deselectFiles(infoHash, files)
+    await loadTorrents()
+  }, [loadTorrents])
+
   const handlePlay = useCallback((infoHash: string, fileIndex: number, name: string) => {
     setSelectedFile({ infoHash, fileIndex, name })
   }, [])
@@ -170,6 +180,8 @@ export default function App() {
       torrents={torrents}
       onRemove={handleRemove}
       onPlay={handlePlay}
+      onSelectFiles={handleSelectFiles}
+      onDeselectFiles={handleDeselectFiles}
     />
   )
 

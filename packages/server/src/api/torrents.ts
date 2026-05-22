@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import type { TorrentEngine } from '../torrent/engine.js'
-import type { AddTorrentRequest } from '../types/index.js'
+import type { AddTorrentRequest, SelectFilesRequest } from '../types/index.js'
 
 function isMagnet(str: string): boolean {
   return str.startsWith('magnet:')
@@ -54,6 +54,32 @@ export function createTorrentRouter(engine: TorrentEngine): Router {
     } catch (err) {
       res.status(500).json({ error: (err as Error).message })
     }
+  })
+
+  router.post('/:infoHash/select', (req, res) => {
+    const { infoHash } = req.params
+    const { files } = req.body as SelectFilesRequest
+
+    if (!Array.isArray(files) || files.some((f) => typeof f !== 'number')) {
+      res.status(400).json({ error: 'files must be an array of numbers' })
+      return
+    }
+
+    engine.selectFiles(infoHash, files)
+    res.json({ success: true })
+  })
+
+  router.post('/:infoHash/deselect', (req, res) => {
+    const { infoHash } = req.params
+    const { files } = req.body as SelectFilesRequest
+
+    if (!Array.isArray(files) || files.some((f) => typeof f !== 'number')) {
+      res.status(400).json({ error: 'files must be an array of numbers' })
+      return
+    }
+
+    engine.deselectFiles(infoHash, files)
+    res.json({ success: true })
   })
 
   router.delete('/:infoHash', (req, res) => {
