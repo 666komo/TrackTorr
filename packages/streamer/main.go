@@ -366,7 +366,9 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 
 	ffArgs := []string{
 		"-fflags", "nobuffer",
+		"-ss", "5",
 		"-i", "pipe:0",
+		"-output_ts_offset", "-5",
 		"-map", "0:v:0",
 	}
 	if audioIdx >= 0 {
@@ -379,7 +381,6 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 	}
 	ffArgs = append(ffArgs,
 		"-c:v", "copy",
-		"-af", "asetpts=PTS-STARTPTS",
 		"-c:a", "aac",
 		"-ac", "2",
 		"-ar", "48000",

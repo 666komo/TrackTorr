@@ -180,7 +180,7 @@ TrackTorr/
 
 ## Known Issues
 
-- **HEVC source corruption** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). With `-c:v copy`, the browser's HEVC decoder waits for the first valid keyframe, causing a ~5s video pause while audio plays. After the keyframe arrives, A/V sync is correct. This is a source-level issue — the corrupted frames cannot be recovered by ffmpeg or the browser decoder.
+- **HEVC source corruption / A/V sync** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). The current workaround skips the first 5s of the source with `-ss 5` and shifts timestamps back with `-output_ts_offset -5`, at the cost of losing the first 5s of content. Investigations into a better solution are ongoing.
 
 ## Inspiration
 
