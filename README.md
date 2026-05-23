@@ -81,7 +81,7 @@ docker build -t tracktorr .
 docker run -d \
   --name tracktorr \
   -p 3030:3030 \
-  -v ./config/config.json:/app/config/config.json:ro \
+  -v ./config/config.json:/app/config/config.json \
   -v tracktorr-data:/data \
   tracktorr
 ```
