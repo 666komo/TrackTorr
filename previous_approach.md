@@ -75,3 +75,13 @@ type probeResult struct {
 - Prowlarr/Jackett search
 - Basic player controls
 - Docker/K3s deployment
+
+## Subsequent Changes
+
+- **Audio/subtitle selection** — added `-map` flags, probe returns `audio[]`/`subtitles[]` arrays, separate WebVTT subtitle endpoint
+- **Per-file management** — added `select_files`/`deselect` commands, UI for per-file selection
+- **Cache eviction** — LRU policy with configurable max size (`-max-cache-gb` flag, default 10GB)
+- **State persistence** — torrents and file selections saved to `state.json`, restored on startup
+- **HEVC workaround attempts**:
+  - Tried `-ss 5 -output_ts_offset -5` — skipped corrupted frames but lost 5s of content
+  - Reverted to plain `-c:v copy` — accepts the ~5s pause as a source limitation

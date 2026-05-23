@@ -223,6 +223,32 @@ export function createStreamRouter(engine: TorrentEngine): Router {
     goReq.end()
   })
 
+  router.post('/playback/:infoHash', async (req, res) => {
+    const { infoHash } = req.params
+    const port = engine.goStreamerPort
+    if (!port) {
+      res.status(503).json({ error: 'Streamer not available' })
+      return
+    }
+    const goReq = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: `/playback/${infoHash}`,
+        method: 'POST',
+        agent: keepAliveAgent,
+        headers: { 'Content-Type': 'application/json' },
+      },
+      (goRes) => {
+        res.writeHead(goRes.statusCode!, { 'Content-Type': 'application/json' })
+        goRes.pipe(res)
+      },
+    )
+    req.pipe(goReq)
+    goReq.on('error', () => { if (!res.headersSent) res.status(502).json({ error: 'Playback save failed' }) })
+    goReq.end()
+  })
+
   return router
 }
 

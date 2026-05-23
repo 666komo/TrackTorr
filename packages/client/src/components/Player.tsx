@@ -189,6 +189,17 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
     }
   }, [isVideo, state])
 
+  // Save playback position periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const el = isVideo ? videoRef.current : audioRef.current
+      if (el && el.currentTime > 0) {
+        api.savePlaybackPosition(infoHash, Math.floor(el.currentTime)).catch(() => {})
+      }
+    }, 10000) // every 10 seconds
+    return () => clearInterval(interval)
+  }, [infoHash, isVideo])
+
   useEffect(() => {
     if (!isVideo || !useTranscode || subtitleIndex === undefined) return
     const video = videoRef.current

@@ -18,6 +18,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,110 @@ type command struct {
 }
 
 var transcodeCacheDir string
+var maxCacheSize int64 // bytes, 0 = unlimited
+var stateFile string   // persistence state file path
+
+type torrentState struct {
+	InfoHash       string `json:"infoHash"`
+	MagnetURI      string `json:"magnetUri,omitempty"`
+	TorrentDataBase64 string `json:"torrentData,omitempty"`
+	SelectedFiles  []int  `json:"selectedFiles,omitempty"`
+	PlaybackPos    int64  `json:"playbackPos,omitempty"` // seconds
+}
+
+type persistedState struct {
+	Torrents []torrentState `json:"torrents"`
+}
+
+func loadState(client *torrent.Client) {
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		log.Printf("[go] no state file: %v", err)
+		return
+	}
+	var state persistedState
+	if err := json.Unmarshal(data, &state); err != nil {
+		log.Printf("[go] state parse error: %v", err)
+		return
+	}
+	for _, t := range state.Torrents {
+		go func(ts torrentState) {
+			if ts.TorrentDataBase64 != "" {
+				data, err := base64.StdEncoding.DecodeString(ts.TorrentDataBase64)
+				if err != nil {
+					log.Printf("[go] restore base64 error: %v", err)
+					return
+				}
+				mi, err := metainfo.Load(bytes.NewReader(data))
+				if err != nil {
+					log.Printf("[go] restore metainfo error: %v", err)
+					return
+				}
+				t, err := client.AddTorrent(mi)
+				if err != nil {
+					log.Printf("[go] restore add error: %v", err)
+					return
+				}
+				<-t.GotInfo()
+				files := t.Files()
+				for _, f := range files {
+					f.SetPriority(torrent.PiecePriorityNone)
+				}
+				for _, idx := range ts.SelectedFiles {
+					if idx >= 0 && idx < len(files) {
+						files[idx].SetPriority(torrent.PiecePriorityNormal)
+					}
+				}
+				log.Printf("[go] restored torrent %s", ts.InfoHash[:12])
+			} else if ts.MagnetURI != "" {
+				t, err := client.AddMagnet(ts.MagnetURI)
+				if err != nil {
+					log.Printf("[go] restore magnet error: %v", err)
+					return
+				}
+				<-t.GotInfo()
+				files := t.Files()
+				for _, f := range files {
+					f.SetPriority(torrent.PiecePriorityNone)
+				}
+				for _, idx := range ts.SelectedFiles {
+					if idx >= 0 && idx < len(files) {
+						files[idx].SetPriority(torrent.PiecePriorityNormal)
+					}
+				}
+				log.Printf("[go] restored magnet %s", ts.InfoHash[:12])
+			}
+		}(t)
+	}
+}
+
+func saveState(client *torrent.Client) {
+	var state persistedState
+	for _, t := range client.Torrents() {
+		ts := torrentState{
+			InfoHash:      t.InfoHash().HexString(),
+			SelectedFiles: []int{},
+		}
+		// Check if we have the metainfo
+		if t.Info() != nil {
+			// Save torrent file as base64
+			mi := t.Metainfo()
+			var buf bytes.Buffer
+			mi.Write(&buf)
+			ts.TorrentDataBase64 = base64.StdEncoding.EncodeToString(buf.Bytes())
+			// Track selected files
+			for i, f := range t.Files() {
+				if f.Priority() != torrent.PiecePriorityNone {
+					ts.SelectedFiles = append(ts.SelectedFiles, i)
+				}
+			}
+		}
+		state.Torrents = append(state.Torrents, ts)
+	}
+	data, _ := json.MarshalIndent(state, "", "  ")
+	os.WriteFile(stateFile, data, 0644)
+	log.Printf("[go] state saved: %d torrents", len(state.Torrents))
+}
 
 var defaultTrackers = []string{
 	"udp://tracker.opentrackr.org:1337/announce",
@@ -96,10 +201,15 @@ func hasReaders(hash string) bool {
 
 func main() {
 	downloadDir := flag.String("dir", os.TempDir(), "download cache directory")
+	maxCacheGB := flag.Int64("max-cache-gb", 10, "max transcode cache size in GB (0 = unlimited)")
 	flag.Parse()
+
+	maxCacheSize = *maxCacheGB * 1024 * 1024 * 1024
 
 	transcodeCacheDir = filepath.Join(*downloadDir, "_transcode_cache")
 	os.MkdirAll(transcodeCacheDir, 0755)
+
+	stateFile = filepath.Join(*downloadDir, "state.json")
 
 	cfg := torrent.NewDefaultClientConfig()
 	cfg.DataDir = *downloadDir
@@ -119,6 +229,9 @@ func main() {
 	}
 	defer client.Close()
 
+	// Restore state from previous session
+	loadState(client)
+
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, `{"type":"error","message":"listen: %v"}`+"\n", err)
@@ -135,6 +248,9 @@ func main() {
 	})
 	mux.HandleFunc("/subtitle/", func(w http.ResponseWriter, r *http.Request) {
 		handleSubtitle(w, r, client)
+	})
+	mux.HandleFunc("/playback/", func(w http.ResponseWriter, r *http.Request) {
+		handlePlayback(w, r, client)
 	})
 
 	server := &http.Server{Handler: mux}
@@ -179,6 +295,7 @@ func main() {
 					for _, f := range t.Files() {
 						f.SetPriority(torrent.PiecePriorityNone)
 					}
+					saveState(client)
 					fmt.Fprintf(os.Stderr, `{"type":"status","message":"added %s"}`+"\n", t.InfoHash().HexString()[:12])
 				}()
 			case "add_magnet":
@@ -200,6 +317,7 @@ func main() {
 					for _, f := range t.Files() {
 						f.SetPriority(torrent.PiecePriorityNone)
 					}
+					saveState(client)
 					fmt.Fprintf(os.Stderr, `{"type":"status","message":"added magnet %s"}`+"\n", t.InfoHash().HexString()[:12])
 				}()
 		case "select_files":
@@ -219,6 +337,7 @@ func main() {
 					for idx := range selected {
 						files[idx].SetPriority(torrent.PiecePriorityNormal)
 					}
+					saveState(client)
 					fmt.Fprintf(os.Stderr, `{"type":"status","message":"selected %d files for %s"}`+"\n", len(cmd.FileIndices), cmd.InfoHash[:12])
 					break
 				}
@@ -234,6 +353,7 @@ func main() {
 			delete(lastUsed, cmd.InfoHash)
 			delete(readCnt, cmd.InfoHash)
 			tmMu.Unlock()
+			saveState(client)
 			fmt.Fprintf(os.Stderr, `{"type":"status","message":"removed %s"}`+"\n", cmd.InfoHash[:12])
 			default:
 				fmt.Fprintf(os.Stderr, `{"type":"error","message":"unknown cmd: %s"}`+"\n", cmd.Cmd)
@@ -245,9 +365,19 @@ func main() {
 		fmt.Fprintf(os.Stderr, `{"type":"status","message":"stdin done"}`+"\n")
 	}()
 
+	// Periodic state save
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			saveState(client)
+		}
+	}()
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
 	<-sigCh
+	saveState(client)
 }
 
 func handleStream(w http.ResponseWriter, r *http.Request, client *torrent.Client) {
@@ -366,9 +496,7 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 
 	ffArgs := []string{
 		"-fflags", "nobuffer",
-		"-ss", "5",
 		"-i", "pipe:0",
-		"-output_ts_offset", "-5",
 		"-map", "0:v:0",
 	}
 	if audioIdx >= 0 {
@@ -479,8 +607,10 @@ func handleTranscode(w http.ResponseWriter, r *http.Request, file *torrent.File,
 		cacheFile = nil
 		if err := os.Rename(cacheTmp, cachePath); err != nil {
 			log.Printf("[go] cache rename error %s/%d: %v", infoHash[:12], fileIndex, err)
+		} else {
+			log.Printf("[go] transcode cached %s/%d", infoHash[:12], fileIndex)
+			evictCacheIfNeeded()
 		}
-		log.Printf("[go] transcode cached %s/%d", infoHash[:12], fileIndex)
 	} else {
 		os.Remove(cacheTmp)
 	}
@@ -603,6 +733,25 @@ func handleSubtitle(w http.ResponseWriter, r *http.Request, client *torrent.Clie
 			log.Printf("[go] subtitle ffmpeg error: %v", err)
 		}
 	}
+}
+
+func handlePlayback(w http.ResponseWriter, r *http.Request, client *torrent.Client) {
+	if r.Method != "POST" {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	_, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, `{"error":"read body"}`, http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Trigger state save
+	saveState(client)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"ok":true}`))
 }
 
 var unsupportedAudio = map[string]string{
@@ -797,6 +946,55 @@ func waitForData(ctx context.Context, file *torrent.File, timeout time.Duration)
 		}
 		if err != nil {
 			return false
+		}
+	}
+}
+
+func evictCacheIfNeeded() {
+	if maxCacheSize <= 0 {
+		return
+	}
+
+	// Calculate current cache size
+	var totalSize int64
+	entries := []struct {
+		path    string
+		modTime time.Time
+		size    int64
+	}{}
+
+	_ = filepath.Walk(transcodeCacheDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !info.IsDir() && strings.HasSuffix(strings.ToLower(path), ".mp4") {
+			totalSize += info.Size()
+			entries = append(entries, struct {
+				path    string
+				modTime time.Time
+				size    int64
+			}{path, info.ModTime(), info.Size()})
+		}
+		return nil
+	})
+
+	if totalSize <= maxCacheSize {
+		return
+	}
+
+	// Sort by mod time (oldest first)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].modTime.Before(entries[j].modTime)
+	})
+
+	// Evict oldest until under limit
+	for _, e := range entries {
+		if totalSize <= maxCacheSize {
+			break
+		}
+		if err := os.Remove(e.path); err == nil {
+			log.Printf("[go] evicted cache %s (%d bytes)", filepath.Base(e.path), e.size)
+			totalSize -= e.size
 		}
 	}
 }

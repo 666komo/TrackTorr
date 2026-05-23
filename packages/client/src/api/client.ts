@@ -98,6 +98,13 @@ export const api = {
   probe: (infoHash: string, fileIndex: number) =>
     fetchJson<ProbeResult>(`/stream/probe/${infoHash}/${fileIndex}`),
 
+  savePlaybackPosition: (infoHash: string, position: number) =>
+    fetchJson<{ ok: boolean }>(`/stream/playback/${infoHash}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ position }),
+    }),
+
   flushCache: () =>
     fetchJson<{ success: boolean; message: string }>('/maintenance/flush-cache', { method: 'POST' }),
 

@@ -180,7 +180,9 @@ TrackTorr/
 
 ## Known Issues
 
-- **HEVC source corruption / A/V sync** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). The current workaround skips the first 5s of the source with `-ss 5` and shifts timestamps back with `-output_ts_offset -5`, at the cost of losing the first 5s of content. Investigations into a better solution are ongoing.
+- **HEVC source corruption** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). Chrome's HEVC decoder waits for the first valid keyframe, causing a ~5s video pause while audio plays. After the keyframe arrives, A/V sync is correct. This is a source-level limitation — the corrupted frames cannot be recovered.
+- **Cache growth** — transcode cache grows unbounded. Mitigated by LRU eviction (default 10GB max, configurable via `-max-cache-gb` flag).
+- **State persistence** — active torrents and file selections are persisted to `state.json` and restored on restart. Playback position saving is implemented but not yet used for resume-on-playback.
 
 ## Inspiration
 
