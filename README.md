@@ -180,7 +180,7 @@ TrackTorr/
 
 ## Known Issues
 
-- **HEVC source corruption / A/V sync** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). The current workaround skips the first 5s of the source with `-ss 5` and shifts timestamps back with `-output_ts_offset -5`, at the cost of losing the first 5s of content. Investigations into a better solution are ongoing.
+- **HEVC source corruption / A/V sync** — many HEVC encodes have corrupted frames in the first ~5 seconds (`[hevc @ ...] Error constructing the frame RPS`). The current workaround skips the first 5s of the source with `-ss 5` and shifts timestamps back with `-output_ts_offset -5`, at the cost of losing the first 5s of content. This issue will remain in future releases too. This solution prevents heavy resource usage while re-encoding whole file, which would be basically pointless and timeconsuming.
 
 ## Inspiration
 
