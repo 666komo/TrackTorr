@@ -188,3 +188,7 @@ TrackTorr/
 
 - [torrserver](https://github.com/YouROK/TorrServer) — the original Go + anacrolix/torrent approach that proved this architecture works
 - [WebTorrent](https://webtorrent.io) — made browser torrenting possible
+
+## License
+
+This project is licensed under the MIT-CR License — a modified MIT License with a Commons Clause restriction that prohibits commercial use. See the [LICENSE](LICENSE) file for details.
