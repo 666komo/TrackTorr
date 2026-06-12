@@ -7,7 +7,7 @@ import { Readable } from 'streamx'
 import type { TorrentStatus } from '../types/index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const STREAMER_BIN = path.resolve(__dirname, '..', '..', '..', '..', 'dist', 'streamer')
+const STREAMER_BIN = process.env.STREAMER_BIN_PATH || path.resolve(__dirname, '..', '..', '..', '..', 'dist', process.platform === 'win32' ? 'streamer.exe' : 'streamer')
 
 type WTInstance = InstanceType<typeof WebTorrent>
 const BLOCK_SIZE = 1 << 14

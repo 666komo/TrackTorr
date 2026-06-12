@@ -5,77 +5,106 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/trackIcon.svg" />
     <title>TrackTorr</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
     <style>
       :root, [data-theme="light"] {
-        --bg: #fff;
-        --bg-card: #fff;
-        --bg-muted: #f5f5f5;
-        --bg-hover: #f0f0f0;
-        --bg-overlay: rgba(0,0,0,0.5);
-        --text: #111;
-        --text-secondary: #666;
-        --text-muted: #999;
-        --border: #e0e0e0;
-        --border-light: #ccc;
-        --primary: #0066cc;
-        --primary-hover: #0052a3;
-        --success: #22c55e;
-        --success-bg: #f0fdf4;
-        --danger: #cc0000;
-        --danger-hover: #a30000;
-        --warning: #fc3;
-        --warning-bg: #332;
-        --warning-text: #fc3;
-        --player-bg: #111;
-        --shadow: 0 2px 8px rgba(0,0,0,0.08);
-        --radius: 6px;
-        --radius-lg: 8px;
+        --bg: #f6f8fa;
+        --bg-card: #ffffff;
+        --bg-muted: #f1f5f9;
+        --bg-hover: #e8ecf1;
+        --bg-overlay: rgba(0,0,0,0.4);
+        --text: #0f172a;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --border: #e2e8f0;
+        --border-light: #cbd5e1;
+        --primary: #6c5ce7;
+        --primary-hover: #7c6cf7;
+        --primary-glow: rgba(108,92,231,0.15);
+        --success: #10b981;
+        --success-bg: #ecfdf5;
+        --danger: #ef4444;
+        --danger-hover: #dc2626;
+        --danger-bg: #fef2f2;
+        --warning: #f59e0b;
+        --warning-bg: #fffbeb;
+        --warning-text: #92400e;
+        --player-bg: #0f0f1a;
+        --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+        --radius: 8px;
+        --radius-lg: 12px;
       }
       [data-theme="dark"] {
-        --bg: #1a1a2e;
-        --bg-card: #16213e;
-        --bg-muted: #1e1e3a;
-        --bg-hover: #252542;
-        --bg-overlay: rgba(0,0,0,0.7);
-        --text: #e0e0e0;
-        --text-secondary: #a0a0b0;
-        --text-muted: #6a6a7a;
-        --border: #2a2a4a;
-        --border-light: #3a3a5a;
-        --primary: #4d8cf0;
-        --primary-hover: #6ba3ff;
-        --success: #4ade80;
-        --success-bg: #1a3a2a;
-        --danger: #ff4444;
-        --danger-hover: #ff6666;
-        --warning: #fbbf24;
-        --warning-bg: #3a3a1a;
+        --bg: #0b0b1a;
+        --bg-card: #13132b;
+        --bg-muted: #1a1a35;
+        --bg-hover: #222244;
+        --bg-overlay: rgba(0,0,0,0.6);
+        --text: #e2e8f0;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --border: #1e1e3a;
+        --border-light: #2a2a4a;
+        --primary: #7c6cf7;
+        --primary-hover: #8b7cf7;
+        --primary-glow: rgba(124,108,247,0.12);
+        --success: #10b981;
+        --success-bg: #064e3b;
+        --danger: #ef4444;
+        --danger-hover: #f87171;
+        --danger-bg: #450a0a;
+        --warning: #f59e0b;
+        --warning-bg: #451a03;
         --warning-text: #fbbf24;
-        --player-bg: #0f0f23;
-        --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        --player-bg: #06060e;
+        --shadow: 0 1px 3px rgba(0,0,0,0.2);
+        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
       }
-      * { box-sizing: border-box; }
+      *, *::before, *::after { box-sizing: border-box; }
       body {
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font-family: system-ui, -apple-system, sans-serif;
-        transition: background .2s, color .2s;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        transition: background .3s ease, color .3s ease;
       }
       input, button, textarea, select {
         font: inherit;
+        font-family: inherit;
       }
       input {
         background: var(--bg-card);
         color: var(--text);
-        border: 1px solid var(--border-light);
+        border: 1px solid var(--border);
         border-radius: var(--radius);
         outline: none;
-        transition: border-color .15s;
+        padding: 10px 14px;
+        transition: border-color .2s ease, box-shadow .2s ease;
       }
-      input:focus { border-color: var(--primary); }
-      button { transition: opacity .15s; }
-      button:hover { opacity: .85; }
+      input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-glow);
+      }
+      input::placeholder { color: var(--text-muted); }
+      button {
+        transition: all .15s ease;
+        cursor: pointer;
+      }
+      button:active { transform: scale(0.97); }
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+      @keyframes spin { to { transform: rotate(360deg) } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
     </style>
   </head>
   <body>

@@ -1,4 +1,5 @@
 import type { IndexerResult } from '../types'
+import { useLang } from '../i18n'
 
 interface SearchResultsProps {
   results: IndexerResult[]
@@ -14,56 +15,88 @@ function formatSize(bytes: number): string {
 }
 
 export default function SearchResults({ results, onAdd }: SearchResultsProps) {
+  const { t } = useLang()
   if (results.length === 0) return null
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: 'var(--text)' }}>
-        Search Results
-        <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({results.length})</span>
+    <div style={{ marginBottom: 24, animation: 'slideUp .35s ease' }}>
+      <h3 style={{
+        margin: '0 0 14px 4px',
+        fontSize: 13,
+        fontWeight: 600,
+        color: 'var(--text-secondary)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+      }}>
+        {t('results.heading')}
+        <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> &middot; {results.length}</span>
       </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {results.map((r, i) => (
           <div
             key={`${r.guid}-${i}`}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
-              padding: '10px 14px',
+              gap: 14,
+              padding: '14px 16px',
               border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
+              borderRadius: 'var(--radius-lg)',
               background: 'var(--bg-card)',
+              boxShadow: 'var(--shadow)',
+              transition: 'all .15s ease',
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>
+              <div style={{
+                fontWeight: 600,
+                fontSize: 14,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                color: 'var(--text)',
+                marginBottom: 4,
+              }}>
                 {r.title}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                <span style={{ color: 'var(--primary)' }}>{r.indexer}</span>
-                {' \u00b7 '}{formatSize(r.size)}
-                {' \u00b7 '}
-                <span style={{ color: 'var(--success)' }}>S:{r.seeders}</span>
-                {' L:'}{r.leechers}
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{
+                  padding: '1px 8px',
+                  borderRadius: 4,
+                  background: 'var(--primary-glow)',
+                  color: 'var(--primary)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}>
+                  {r.indexer}
+                </span>
+                <span>{formatSize(r.size)}</span>
+                <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                  S:{r.seeders}
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  L:{r.leechers}
+                </span>
               </div>
             </div>
             {r.magnetUrl && (
               <button
                 onClick={() => onAdd(r.magnetUrl!)}
                 style={{
-                  padding: '6px 16px',
-                  borderRadius: 4,
-                  border: '1px solid var(--primary)',
-                  background: 'transparent',
-                  color: 'var(--primary)',
+                  padding: '8px 20px',
+                  borderRadius: 'var(--radius)',
+                  border: 'none',
+                  background: 'var(--primary)',
+                  color: '#fff',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   fontSize: 13,
+                  boxShadow: '0 2px 6px var(--primary-glow)',
+                  transition: 'all .15s ease',
                 }}
               >
-                Add
+                {t('results.add')}
               </button>
             )}
           </div>

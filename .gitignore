@@ -1,8 +1,41 @@
+# Secrets & local config
 config/config.json
+config.json
+.env
+.env.*
+
+# Dependencies
 node_modules/
 packages/*/node_modules/
+
+# Build output
 dist/
 packages/*/dist/
-packages/client/tsconfig.tsbuildinfo
-config.json
+*.tsbuildinfo
+
+# Go build artifacts
+packages/streamer/streamer
+packages/streamer/streamer.exe
+
+# Logs
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Misc
+OC.md
 possible_weak_points.txt
+previous_approach.md

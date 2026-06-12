@@ -2,9 +2,29 @@ import type { AppConfig, IndexerResult, TorrentStatus, ProbeResult } from '../ty
 
 const BASE = '/api'
 
+let authToken: string | null = localStorage.getItem('auth_token')
+
+function authHeaders(): Record<string, string> {
+  if (!authToken) return {}
+  return { Authorization: `Bearer ${authToken}` }
+}
+
+export function setAuthToken(token: string | null) {
+  authToken = token
+  if (token) localStorage.setItem('auth_token', token)
+  else localStorage.removeItem('auth_token')
+}
+
+export function getAuthToken() {
+  return authToken
+}
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const fullUrl = `${BASE}${url}`
-  const res = await fetch(fullUrl, init)
+  const headers = new Headers(init?.headers)
+  const ah = authHeaders()
+  if (ah.Authorization) headers.set('Authorization', ah.Authorization)
+  const res = await fetch(fullUrl, { ...init, headers })
   const text = await res.text()
   if (!res.ok) {
     let msg: string
@@ -14,6 +34,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     } catch {
       msg = `Server returned ${res.status}: ${text.slice(0, 100)}`
     }
+    if (res.status === 401) setAuthToken(null)
     throw new Error(msg)
   }
   try {
@@ -25,6 +46,19 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => fetchJson<{ status: string; indexer: boolean }>('/health'),
+
+  login: (username: string, password: string) =>
+    fetchJson<{ token: string }>('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    }),
+
+  logout: () =>
+    fetchJson<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+
+  checkAuth: () =>
+    fetchJson<{ authenticated: boolean }>('/auth/check'),
 
   search: (query: string, category?: string) => {
     const params = new URLSearchParams({ q: query })

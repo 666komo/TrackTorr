@@ -9,7 +9,7 @@ import { createStreamRouter } from './api/stream.js'
 import { createConfigRouter } from './api/config.js'
 import { createMaintenanceRouter } from './api/maintenance.js'
 import { TorrentEngine } from './torrent/engine.js'
-import { readConfig, configExists } from './setup.js'
+import { createAuthRouter, authMiddleware } from './api/auth.js'
 import type { ServerConfig } from './types/index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -21,6 +21,16 @@ export function createServer(config: ServerConfig) {
 
   app.use(cors())
   app.use(express.json())
+
+  app.use('/api/auth', createAuthRouter(config))
+
+  if (config.username && config.password) {
+    app.use('/api/torrents', authMiddleware)
+    app.use('/api/search', authMiddleware)
+    app.use('/api/stream', authMiddleware)
+    app.use('/api/config', authMiddleware)
+    app.use('/api/maintenance', authMiddleware)
+  }
 
   app.use('/api/torrents', createTorrentRouter(engine))
   app.use('/api/search', createSearchRouter())

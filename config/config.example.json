@@ -3,5 +3,7 @@
   "host": "0.0.0.0",
   "indexerUrl": "http://prowlarr:9696",
   "indexerApiKey": "your-api-key-here",
-  "downloadDir": "/data/downloads"
+  "downloadDir": "/data/downloads",
+  "username": "admin",
+  "password": "changeme"
 }

@@ -10,6 +10,8 @@ export interface RawConfig {
   indexerUrl: string
   indexerApiKey: string
   downloadDir: string
+  username?: string
+  password?: string
 }
 
 export function loadConfig(): ServerConfig {
@@ -47,5 +49,7 @@ export function loadConfig(): ServerConfig {
       ? { url: raw.indexerUrl, apiKey: raw.indexerApiKey }
       : undefined,
     downloadDir: raw.downloadDir,
+    username: raw.username,
+    password: raw.password,
   }
 }
