@@ -15,8 +15,10 @@ const MIME_MAP: Record<string, string> = {
   '.flac': 'audio/flac',
   '.wav': 'audio/wav',
   '.ogg': 'audio/ogg',
-  '.m4a': 'video/mp4',
+  '.m4a': 'audio/mp4',
   '.aac': 'audio/aac',
+  '.opus': 'audio/ogg',
+  '.mka': 'audio/x-matroska',
 }
 
 function getMime(name: string): string {

@@ -437,8 +437,8 @@ func handleStream(w http.ResponseWriter, r *http.Request, client *torrent.Client
 	reader.SetReadahead(16 << 20)
 	defer reader.Close()
 
-	etag := fmt.Sprintf(`"%s/%d"`, infoHash, fileIndex)
-	w.Header().Set("ETag", etag)
+	w.Header().Set("Content-Type", mime)
+	w.Header().Set("ETag", fmt.Sprintf(`"%s/%d"`, infoHash, fileIndex))
 	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("Cache-Control", "no-transform")
 	http.ServeContent(w, r, file.DisplayPath(), time.Time{}, reader)
@@ -1052,8 +1052,10 @@ func detectMime(name string) string {
 	}
 	ext := strings.ToLower(name[idx:])
 	switch ext {
-	case ".mp4", ".m4v", ".m4a":
+	case ".mp4", ".m4v":
 		return "video/mp4"
+	case ".m4a":
+		return "audio/mp4"
 	case ".mkv":
 		return "video/x-matroska"
 	case ".webm":
@@ -1068,10 +1070,12 @@ func detectMime(name string) string {
 		return "audio/flac"
 	case ".wav":
 		return "audio/wav"
-	case ".ogg":
+	case ".ogg", ".opus":
 		return "audio/ogg"
 	case ".aac":
 		return "audio/aac"
+	case ".mka":
+		return "audio/x-matroska"
 	default:
 		return "application/octet-stream"
 	}

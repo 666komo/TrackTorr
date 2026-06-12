@@ -40,8 +40,14 @@ export function createAuthRouter(config: ServerConfig) {
 }
 
 export function authMiddleware(req: any, res: any, next: any) {
+  let token: string | undefined
   const auth = req.headers.authorization
-  if (!auth?.startsWith('Bearer ') || !tokens.has(auth.slice(7))) {
+  if (auth?.startsWith('Bearer ')) {
+    token = auth.slice(7)
+  } else if (typeof req.query.token === 'string' && req.query.token) {
+    token = req.query.token
+  }
+  if (!token || !tokens.has(token)) {
     res.status(401).json({ error: 'Unauthorized' })
     return
   }

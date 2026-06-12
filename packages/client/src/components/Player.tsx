@@ -101,7 +101,9 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
   }, [paused])
 
   const videoExts = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v']
+  const audioExts = ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac', '.opus', '.mka']
   const isVideo = videoExts.some((ext) => fileName.toLowerCase().endsWith(ext))
+  const isAudio = audioExts.some((ext) => fileName.toLowerCase().endsWith(ext))
   const ext = getExt(fileName)
 
   useEffect(() => {
@@ -109,6 +111,12 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
     setProbeData(null)
     setAudioIndex(undefined)
     setSubtitleIndex(undefined)
+
+    if (isAudio) {
+      setUseTranscode(false)
+      return
+    }
+
     api.probe(infoHash, fileIndex)
       .then((data) => {
         if (cancelled) return
@@ -139,7 +147,7 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
         }
       })
     return () => { cancelled = true }
-  }, [infoHash, fileIndex])
+  }, [infoHash, fileIndex, isAudio])
 
   const streamOpts = useCallback(() => {
     if (!useTranscode) return { src: streamUrl, key: 'native' }

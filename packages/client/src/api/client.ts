@@ -111,20 +111,27 @@ export const api = {
       body: JSON.stringify(config),
     }),
 
-  streamUrl: (infoHash: string, fileIndex: number) =>
-    `${BASE}/stream/${infoHash}/${fileIndex}`,
+  streamUrl: (infoHash: string, fileIndex: number) => {
+    let url = `${BASE}/stream/${infoHash}/${fileIndex}`
+    if (authToken) url += `?token=${authToken}`
+    return url
+  },
 
   transcodeUrl: (infoHash: string, fileIndex: number, audioIndex?: number, subtitleIndex?: number) => {
     let url = `${BASE}/stream/transcode/${infoHash}/${fileIndex}`
     const params: string[] = []
     if (audioIndex !== undefined) params.push(`audio_index=${audioIndex}`)
     if (subtitleIndex !== undefined) params.push(`subtitle_index=${subtitleIndex}`)
+    if (authToken) params.push(`token=${authToken}`)
     if (params.length > 0) url += '?' + params.join('&')
     return url
   },
 
-  subtitleUrl: (infoHash: string, fileIndex: number, subtitleIndex: number) =>
-    `${BASE}/stream/subtitle/${infoHash}/${fileIndex}?subtitle_index=${subtitleIndex}`,
+  subtitleUrl: (infoHash: string, fileIndex: number, subtitleIndex: number) => {
+    let url = `${BASE}/stream/subtitle/${infoHash}/${fileIndex}?subtitle_index=${subtitleIndex}`
+    if (authToken) url += `&token=${authToken}`
+    return url
+  },
 
   probeUrl: (infoHash: string, fileIndex: number) =>
     `${BASE}/stream/probe/${infoHash}/${fileIndex}`,
