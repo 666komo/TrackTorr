@@ -12,9 +12,9 @@ interface PlayerProps {
 }
 
 const extBadge: Record<string, string> = {
-  mp4: '#6366f1', mkv: '#8b5cf6', avi: '#eab308',
-  mov: '#06b6d4', webm: '#dc2626', m4v: '#0891b2',
-  mp3: '#d97706', flac: '#a855f7', wav: '#0ea5e9', ogg: '#65a30d',
+  mp4: '#46ebeb', mkv: '#7C4DFF', avi: '#FCEE0C',
+  mov: '#00ff88', webm: '#FB0A26', m4v: '#46ebeb',
+  mp3: '#FFD600', flac: '#7C4DFF', wav: '#00ff88', ogg: '#FCEE0C',
 }
 
 function getExt(fileName: string): string {
@@ -322,52 +322,77 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
   return (
     <div
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
         background: 'var(--player-bg)',
-        zIndex: 100,
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: '0 0 30px rgba(70,235,235,0.2)',
+        marginBottom: 24,
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '2px',
+        background: 'linear-gradient(90deg, transparent, var(--primary), var(--secondary), transparent)',
+        animation: 'dataStream 3s linear infinite',
+      }} />
       {/* Status bar */}
       <div style={{
-        padding: '8px 16px',
+        padding: '8px 14px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
           {ext && (
             <span style={{
-              padding: '2px 7px', borderRadius: 4,
-              background: extColor, color: '#fff',
+              padding: '3px 8px', borderRadius: 'var(--radius)',
+              background: extColor, color: '#000',
               fontSize: 10, fontWeight: 700,
               textTransform: 'uppercase', lineHeight: '1.4', flexShrink: 0,
+              boxShadow: `0 0 8px ${extColor}`,
+              fontFamily: "'Orbitron', sans-serif",
+              letterSpacing: '1px',
             }}>
               {ext}
             </span>
           )}
           <span style={{
-            color: '#e2e8f0', fontSize: 14, fontWeight: 500,
+            color: 'var(--text)', fontSize: 14, fontWeight: 500,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {fileName}
           </span>
           {state === 'probing' && (
             <span style={{
-              width: 12, height: 12,
-              border: '2px solid rgba(255,255,255,0.2)',
-              borderTopColor: '#fff', borderRadius: '50%',
+              width: 14, height: 14,
+              border: '2px solid var(--primary)',
+              borderTopColor: 'transparent', borderRadius: '50%',
               animation: 'spin .6s linear infinite', flexShrink: 0,
+              boxShadow: '0 0 8px var(--primary)',
             }} />
           )}
           {state === 'playing' && (
-            <span style={{ color: '#10b981', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-              {'\u25CF'} {t('player.live')}
+            <span style={{
+              color: 'var(--success)', fontSize: 11, fontWeight: 700, flexShrink: 0,
+              textShadow: '0 0 6px var(--success)',
+              fontFamily: "'Orbitron', sans-serif",
+              letterSpacing: '1px',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{
+                width: 8, height: 8,
+                borderRadius: '50%',
+                background: 'var(--success)',
+                boxShadow: '0 0 8px var(--success)',
+                animation: 'neonPulse 2s ease-in-out infinite',
+              }} />
+              {t('player.live')}
             </span>
           )}
           {hasMultiAudio && useTranscode && (
@@ -375,10 +400,19 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
               value={audioIndex ?? probeData!.audio[0].index}
               onChange={(e) => setAudioIndex(Number(e.target.value))}
               style={{
-                padding: '2px 8px', borderRadius: 4,
-                border: '1px solid rgba(255,255,255,0.15)',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#ccc', fontSize: 11, flexShrink: 0,
+                padding: '4px 10px', borderRadius: 'var(--radius)',
+                border: '1px solid var(--primary)',
+                background: 'var(--bg-card)',
+                color: 'var(--primary)', fontSize: 11, flexShrink: 0,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all .2s ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = 'var(--glow-cyan)'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none'
               }}
             >
               {probeData!.audio.map((a) => (
@@ -393,10 +427,19 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
               value={subtitleIndex ?? -1}
               onChange={(e) => setSubtitleIndex(Number(e.target.value) >= 0 ? Number(e.target.value) : undefined)}
               style={{
-                padding: '2px 8px', borderRadius: 4,
-                border: '1px solid rgba(255,255,255,0.15)',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#ccc', fontSize: 11, flexShrink: 0,
+                padding: '4px 10px', borderRadius: 'var(--radius)',
+                border: '1px solid var(--secondary)',
+                background: 'var(--bg-card)',
+                color: 'var(--secondary)', fontSize: 11, flexShrink: 0,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all .2s ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = 'var(--glow-violet)'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none'
               }}
             >
               <option value={-1}>{t('player.no_subtitles')}</option>
@@ -408,15 +451,45 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
             </select>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
           <button onClick={() => setExpanded((v) => !v)} title={expanded ? t('player.collapse') : t('player.expand')} style={{
-            ...btn, padding: '4px 8px', fontSize: 16, opacity: 0.6,
-          }}>
+            ...btn, padding: '6px 10px', fontSize: 16, opacity: 0.8,
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            color: 'var(--primary)',
+            transition: 'all .2s ease',
+          }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--primary)'
+              e.currentTarget.style.boxShadow = 'var(--glow-cyan)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
+          >
             {expanded ? '\u25BC' : '\u25B2'}
           </button>
           <button onClick={onClose} title={t('player.close_player')} style={{
-            ...btn, padding: '4px 10px', fontSize: 13, fontWeight: 600, opacity: 0.6,
-          }}>
+            ...btn, padding: '6px 12px', fontSize: 12, fontWeight: 700, opacity: 0.8,
+            border: '1px solid var(--danger)',
+            borderRadius: 'var(--radius)',
+            color: 'var(--danger)',
+            background: 'transparent',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            fontFamily: "'Orbitron', sans-serif",
+            transition: 'all .2s ease',
+          }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--glow-violet)'
+              e.currentTarget.style.background = 'var(--danger-bg)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
             {t('player.close')}
           </button>
         </div>
@@ -424,9 +497,11 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
 
       {warning && state !== 'probing' && (
         <div style={{
-          color: '#fbbf24', fontSize: 12, margin: '0 16px 6px',
-          padding: '6px 10px', background: 'rgba(251,191,36,0.1)',
-          borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4,
+          color: 'var(--warning)', fontSize: 12, margin: '0 18px 8px',
+          padding: '8px 12px', background: 'var(--warning-bg)',
+          borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', gap: 6,
+          border: '1px solid var(--warning)',
+          boxShadow: '0 0 10px rgba(255,170,0,0.3)',
         }}>
           <span>{'\u26A0'}</span>
           <span>{warning}</span>
@@ -435,14 +510,16 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
 
       {state === 'preparing' && !error && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          color: '#94a3b8', fontSize: 13, padding: '4px 16px 10px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          color: 'var(--primary)', fontSize: 13, padding: '6px 18px 12px',
+          fontWeight: 600,
         }}>
           <span style={{
-            width: 14, height: 14,
-            border: '2px solid rgba(255,255,255,0.2)',
-            borderTopColor: '#94a3b8', borderRadius: '50%',
+            width: 16, height: 16,
+            border: '2px solid var(--primary)',
+            borderTopColor: 'transparent', borderRadius: '50%',
             animation: 'spin .6s linear infinite',
+            boxShadow: '0 0 8px var(--primary)',
           }} />
           {t('player.loading')}
         </div>
@@ -450,9 +527,11 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
 
       {error && (
         <div style={{
-          color: '#f87171', fontSize: 12, margin: '0 16px 6px',
-          padding: '6px 10px', background: 'rgba(239,68,68,0.1)',
-          borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8,
+          color: 'var(--danger)', fontSize: 12, margin: '0 18px 8px',
+          padding: '8px 12px', background: 'var(--danger-bg)',
+          borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', gap: 10,
+          border: '1px solid var(--danger)',
+          boxShadow: '0 0 10px rgba(255,0,102,0.3)',
         }}>
           <span>{error}</span>
           <button
@@ -462,10 +541,22 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
               setUseTranscode(null)
             }}
             style={{
-              padding: '2px 10px', borderRadius: 4,
-              border: '1px solid rgba(239,68,68,0.4)',
-              background: 'transparent', color: '#f87171',
+              padding: '4px 12px', borderRadius: 'var(--radius)',
+              border: '1px solid var(--danger)',
+              background: 'transparent', color: 'var(--danger)',
               cursor: 'pointer', fontSize: 11, flexShrink: 0,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              transition: 'all .2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--glow-violet)'
+              e.currentTarget.style.background = 'var(--danger-bg)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.background = 'transparent'
             }}
           >
             Retry
@@ -477,13 +568,13 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
         <div style={{
           overflow: 'hidden',
           transition: 'max-height .3s ease',
-          maxHeight: expanded ? '80vh' : 0,
+          maxHeight: expanded ? '50vh' : 0,
         }}>
           <div ref={wrapperRef} className="fs-wrapper" style={{ position: 'relative' }}>
             <video
               ref={videoRef}
               style={{
-                width: '100%', maxHeight: '80vh',
+                width: '100%', maxHeight: '50vh',
                 display: 'block', objectFit: 'contain',
                 background: '#000', cursor: 'pointer',
               }}
@@ -495,29 +586,34 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
                 style={{
                   position: 'absolute',
                   bottom: 0, left: 0, right: 0,
-                  background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-                  padding: '32px 12px 8px',
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.9))',
+                  padding: '32px 14px 10px',
                   opacity: showControls ? 1 : 0,
                   transition: 'opacity .3s ease',
                   pointerEvents: showControls ? 'auto' : 'none',
                 }}
                 onMouseDown={(e) => e.preventDefault()}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)' }}>
                   <button onClick={togglePlay} title={paused ? 'Play' : 'Pause'} style={{
-                    ...btn, fontSize: 22, padding: '2px 6px', opacity: 0.9,
+                    ...btn, fontSize: 22, padding: '4px 8px', opacity: 0.9,
+                    color: 'var(--primary)',
+                    textShadow: '0 0 8px var(--primary)',
                   }}>
                     {paused ? '\u25B6' : '\u23F8'}
                   </button>
                   <span style={{
                     fontSize: 12, fontVariantNumeric: 'tabular-nums',
-                    color: '#94a3b8', minWidth: 70,
+                    color: 'var(--text-secondary)', minWidth: 80,
+                    fontFamily: "'JetBrains Mono', monospace",
                   }}>
                     {fmt(currentTime)} / {fmt(duration)}
                   </span>
                   <div style={{ flex: 1 }} />
                   <button onClick={toggleFs} title="Fullscreen" style={{
-                    ...btn, fontSize: 18, padding: '2px 6px',
+                    ...btn, fontSize: 18, padding: '4px 8px',
+                    color: 'var(--primary)',
+                    textShadow: '0 0 8px var(--primary)',
                   }}>
                     {'\u26F6'}
                   </button>
@@ -530,17 +626,22 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
 
       {!isVideo && expanded && (
         <>
-          <div style={{ padding: '0 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ padding: '0 14px 4px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={togglePlay} title={paused ? 'Play' : 'Pause'} style={{
-              ...btn, fontSize: 20, color: '#e2e8f0',
+              ...btn, fontSize: 20, color: 'var(--primary)',
+              textShadow: '0 0 8px var(--primary)',
             }}>
               {paused ? '\u25B6' : '\u23F8'}
             </button>
-            <span style={{ fontSize: 12, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{
+              fontSize: 12, color: 'var(--text-secondary)',
+              fontVariantNumeric: 'tabular-nums',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
               {fmt(currentTime)} / {fmt(duration)}
             </span>
           </div>
-          <div style={{ padding: '0 16px 10px' }}>
+          <div style={{ padding: '0 14px 8px' }}>
             <audio ref={audioRef} style={{ width: '100%', display: 'block' }} />
           </div>
         </>
@@ -554,18 +655,20 @@ export default function Player({ streamUrl, fileName, infoHash, fileIndex, onClo
         video::-webkit-media-controls { display: none !important }
         input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none;
-          width: 12px; height: 12px;
+          width: 14px; height: 14px;
           border-radius: 50%;
-          background: #7c6cf7;
-          border: 2px solid #fff;
+          background: var(--primary);
+          border: 2px solid #000;
           cursor: pointer;
+          box-shadow: 0 0 8px var(--primary);
         }
         input[type="range"]::-moz-range-thumb {
-          width: 12px; height: 12px;
+          width: 14px; height: 14px;
           border-radius: 50%;
-          background: #7c6cf7;
-          border: 2px solid #fff;
+          background: var(--primary);
+          border: 2px solid #000;
           cursor: pointer;
+          box-shadow: 0 0 8px var(--primary);
         }
         video::cue { color: #fff; background: transparent; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000; font-size: 1.2em; }
         video::cue(b) { font-weight: bold }

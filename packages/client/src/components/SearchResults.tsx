@@ -19,34 +19,67 @@ export default function SearchResults({ results, onAdd }: SearchResultsProps) {
   if (results.length === 0) return null
 
   return (
-    <div style={{ marginBottom: 24, animation: 'slideUp .35s ease' }}>
+    <div style={{ marginBottom: 28, animation: 'slideUp .35s ease' }}>
       <h3 style={{
-        margin: '0 0 14px 4px',
-        fontSize: 13,
-        fontWeight: 600,
-        color: 'var(--text-secondary)',
+        margin: '0 0 16px 4px',
+        fontSize: 12,
+        fontWeight: 700,
+        color: 'var(--primary)',
         textTransform: 'uppercase',
-        letterSpacing: '0.5px',
+        letterSpacing: '2px',
+        fontFamily: "'Orbitron', sans-serif",
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
       }}>
+        <span style={{
+          width: 8, height: 8,
+          borderRadius: '50%',
+          background: 'var(--danger)',
+          boxShadow: '0 0 8px var(--danger)',
+          animation: 'neonPulse 2s ease-in-out infinite',
+        }} />
         {t('results.heading')}
-        <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> &middot; {results.length}</span>
+        <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}> &middot; {results.length}</span>
       </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {results.map((r, i) => (
           <div
             key={`${r.guid}-${i}`}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 14,
-              padding: '14px 16px',
+              gap: 16,
+              padding: '16px 18px',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
               background: 'var(--bg-card)',
               boxShadow: 'var(--shadow)',
-              transition: 'all .15s ease',
+              transition: 'all .2s ease',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--primary)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-lg)'
+              e.currentTarget.style.transform = 'translateX(4px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.boxShadow = 'var(--shadow)'
+              e.currentTarget.style.transform = 'translateX(0)'
             }}
           >
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '3px',
+              height: '100%',
+              background: 'linear-gradient(180deg, var(--danger), var(--primary))',
+              opacity: 0,
+              transition: 'opacity .2s ease',
+            }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontWeight: 600,
@@ -55,23 +88,27 @@ export default function SearchResults({ results, onAdd }: SearchResultsProps) {
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 color: 'var(--text)',
-                marginBottom: 4,
+                marginBottom: 6,
               }}>
                 {r.title}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{
-                  padding: '1px 8px',
-                  borderRadius: 4,
-                  background: 'var(--primary-glow)',
-                  color: 'var(--primary)',
-                  fontSize: 11,
-                  fontWeight: 600,
+                  padding: '2px 10px',
+                  borderRadius: 'var(--radius)',
+                  background: 'var(--danger-bg)',
+                  color: 'var(--danger)',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  border: '1px solid var(--danger)',
+                  boxShadow: '0 0 6px var(--danger-bg)',
                 }}>
                   {r.indexer}
                 </span>
-                <span>{formatSize(r.size)}</span>
-                <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                <span style={{ color: 'var(--text-muted)' }}>{formatSize(r.size)}</span>
+                <span style={{ color: 'var(--success)', fontWeight: 700, textShadow: '0 0 4px var(--success)' }}>
                   S:{r.seeders}
                 </span>
                 <span style={{ color: 'var(--text-muted)' }}>
@@ -83,17 +120,28 @@ export default function SearchResults({ results, onAdd }: SearchResultsProps) {
               <button
                 onClick={() => onAdd(r.magnetUrl!)}
                 style={{
-                  padding: '8px 20px',
+                  padding: '10px 24px',
                   borderRadius: 'var(--radius)',
                   border: 'none',
-                  background: 'var(--primary)',
-                  color: '#fff',
+                  background: 'linear-gradient(135deg, var(--danger), var(--primary))',
+                  color: '#000',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  boxShadow: '0 2px 6px var(--primary-glow)',
-                  transition: 'all .15s ease',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  letterSpacing: '1px',
+                  textTransform: 'uppercase',
+                  fontFamily: "'Orbitron', sans-serif",
+                  boxShadow: 'var(--glow-cyan)',
+                  transition: 'all .2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = 'var(--shadow-lg)'
+                  e.currentTarget.style.transform = 'scale(1.05)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'var(--glow-cyan)'
+                  e.currentTarget.style.transform = 'scale(1)'
                 }}
               >
                 {t('results.add')}

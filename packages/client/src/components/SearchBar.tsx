@@ -16,7 +16,7 @@ export default function SearchBar({ onSearch, searching }: SearchBarProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
       <div style={{
         flex: 1,
         position: 'relative',
@@ -34,9 +34,10 @@ export default function SearchBar({ onSearch, searching }: SearchBarProps) {
           strokeLinejoin="round"
           style={{
             position: 'absolute',
-            left: 14,
-            color: 'var(--text-muted)',
+            left: 16,
+            color: 'var(--primary)',
             pointerEvents: 'none',
+            filter: 'drop-shadow(0 0 4px var(--primary))',
           }}
         >
           <circle cx="11" cy="11" r="8"/>
@@ -49,12 +50,21 @@ export default function SearchBar({ onSearch, searching }: SearchBarProps) {
           placeholder={t('search.placeholder')}
           style={{
             flex: 1,
-            padding: '10px 14px 10px 42px',
+            padding: '12px 16px 12px 46px',
             borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--border)',
             background: 'var(--bg-card)',
             color: 'var(--text)',
             fontSize: 14,
+            transition: 'all .2s ease',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'var(--primary)'
+            e.currentTarget.style.boxShadow = 'var(--glow-cyan)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         />
       </div>
@@ -62,25 +72,39 @@ export default function SearchBar({ onSearch, searching }: SearchBarProps) {
         type="submit"
         disabled={searching}
         style={{
-          padding: '10px 28px',
+          padding: '12px 32px',
           borderRadius: 'var(--radius-lg)',
           border: 'none',
-          background: searching ? 'var(--text-muted)' : 'var(--primary)',
-          color: '#fff',
+          background: searching ? 'var(--text-muted)' : 'linear-gradient(135deg, var(--danger), var(--primary))',
+          color: '#000',
           cursor: searching ? 'default' : 'pointer',
-          fontWeight: 600,
+          fontWeight: 700,
           fontSize: 14,
-          letterSpacing: '0.2px',
-          boxShadow: searching ? 'none' : '0 2px 8px var(--primary-glow)',
-          transition: 'all .15s ease',
+          letterSpacing: '1px',
+          textTransform: 'uppercase',
+          fontFamily: "'Orbitron', sans-serif",
+          boxShadow: searching ? 'none' : 'var(--glow-cyan)',
+          transition: 'all .2s ease',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+        onMouseEnter={(e) => {
+          if (!searching) {
+            e.currentTarget.style.boxShadow = 'var(--shadow-lg)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = searching ? 'none' : 'var(--glow-cyan)'
+          e.currentTarget.style.transform = 'translateY(0)'
         }}
       >
         {searching ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <span style={{
-              width: 14, height: 14,
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderTopColor: '#fff',
+              width: 16, height: 16,
+              border: '2px solid rgba(0,0,0,0.3)',
+              borderTopColor: '#000',
               borderRadius: '50%',
               display: 'inline-block',
               animation: 'spin .6s linear infinite',

@@ -45,7 +45,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  health: () => fetchJson<{ status: string; indexer: boolean }>('/health'),
+  health: () => fetchJson<{ status: string; indexer: boolean; authEnabled: boolean }>('/health'),
 
   login: (username: string, password: string) =>
     fetchJson<{ token: string }>('/auth/login', {

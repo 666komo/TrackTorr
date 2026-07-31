@@ -24,7 +24,7 @@ export function createServer(config: ServerConfig) {
 
   app.use('/api/auth', createAuthRouter(config))
 
-  if (config.username && config.password) {
+  if (config.authEnabled) {
     app.use('/api/torrents', authMiddleware)
     app.use('/api/search', authMiddleware)
     app.use('/api/stream', authMiddleware)
@@ -41,7 +41,7 @@ export function createServer(config: ServerConfig) {
   const hasIndexer = config.indexer?.url && config.indexer?.apiKey
 
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', indexer: !!hasIndexer })
+    res.json({ status: 'ok', indexer: !!hasIndexer, authEnabled: config.authEnabled })
   })
 
   // Serve built frontend for production (must be after API routes)

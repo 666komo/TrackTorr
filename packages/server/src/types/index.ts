@@ -62,6 +62,7 @@ export interface ServerConfig {
   host: string
   indexer?: IndexerConfig
   downloadDir: string
+  authEnabled: boolean
   username?: string
   password?: string
 }

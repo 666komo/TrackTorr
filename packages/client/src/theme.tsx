@@ -7,12 +7,12 @@ interface ThemeCtx {
   toggle: () => void
 }
 
-const Ctx = createContext<ThemeCtx>({ theme: 'light', toggle: () => {} })
+const Ctx = createContext<ThemeCtx>({ theme: 'dark', toggle: () => {} })
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'light'
-    return (localStorage.getItem('tracktorr-theme') as Theme) || 'light'
+    if (typeof window === 'undefined') return 'dark'
+    return (localStorage.getItem('tracktorr-theme') as Theme) || 'dark'
   })
 
   useEffect(() => {

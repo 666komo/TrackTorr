@@ -10,6 +10,7 @@ export interface RawConfig {
   indexerUrl: string
   indexerApiKey: string
   downloadDir: string
+  authEnabled?: boolean
   username?: string
   password?: string
 }
@@ -49,6 +50,7 @@ export function loadConfig(): ServerConfig {
       ? { url: raw.indexerUrl, apiKey: raw.indexerApiKey }
       : undefined,
     downloadDir: raw.downloadDir,
+    authEnabled: raw.authEnabled !== false && !!(raw.username && raw.password),
     username: raw.username,
     password: raw.password,
   }

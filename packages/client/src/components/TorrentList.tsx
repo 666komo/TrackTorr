@@ -10,10 +10,10 @@ interface TorrentListProps {
 }
 
 const extBadge: Record<string, string> = {
-  mp4: '#6366f1', mkv: '#8b5cf6', avi: '#eab308',
-  mov: '#06b6d4', webm: '#dc2626', m4v: '#0891b2',
-  mp3: '#d97706', flac: '#a855f7', wav: '#0ea5e9', ogg: '#65a30d',
-  mka: '#a855f7', m4a: '#0891b2', aac: '#0891b2',
+  mp4: '#46ebeb', mkv: '#7C4DFF', avi: '#FCEE0C',
+  mov: '#00ff88', webm: '#FB0A26', m4v: '#46ebeb',
+  mp3: '#FFD600', flac: '#7C4DFF', wav: '#00ff88', ogg: '#FCEE0C',
+  mka: '#7C4DFF', m4a: '#46ebeb', aac: '#00ff88',
 }
 
 function getExt(name: string): string {
@@ -62,17 +62,28 @@ export default function TorrentList({ torrents, onRemove, onPlay, wide }: Torren
   return (
     <div style={{ marginTop: wide ? 0 : 28 }}>
       <h3 style={{
-        margin: '0 0 14px 4px',
-        fontSize: 13,
-        fontWeight: 600,
-        color: 'var(--text-secondary)',
+        margin: '0 0 16px 4px',
+        fontSize: 12,
+        fontWeight: 700,
+        color: 'var(--primary)',
         textTransform: 'uppercase',
-        letterSpacing: '0.5px',
+        letterSpacing: '2px',
+        fontFamily: "'Orbitron', sans-serif",
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
       }}>
+        <span style={{
+          width: 8, height: 8,
+          borderRadius: '50%',
+          background: 'var(--danger)',
+          boxShadow: '0 0 8px var(--danger)',
+          animation: 'neonPulse 2s ease-in-out infinite',
+        }} />
         {t('torrents.heading')}
-        <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> &middot; {torrents.length}</span>
+        <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}> &middot; {torrents.length}</span>
       </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {torrents.map((tor) => {
           const files = playableFiles(tor.files)
           const multi = files.length > 1
@@ -87,13 +98,32 @@ export default function TorrentList({ torrents, onRemove, onPlay, wide }: Torren
                 border: '1px solid var(--border)',
                 boxShadow: 'var(--shadow)',
                 overflow: 'hidden',
+                transition: 'all .2s ease',
+                position: 'relative',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)'
+                e.currentTarget.style.boxShadow = 'var(--shadow-lg)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.boxShadow = 'var(--shadow)'
               }}
             >
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '3px',
+                height: '100%',
+                background: 'linear-gradient(180deg, var(--danger), var(--primary))',
+                opacity: 0.7,
+              }} />
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '10px 14px',
+                padding: '12px 16px 12px 20px',
               }}>
                 {multi ? (
                   <button
@@ -114,24 +144,30 @@ export default function TorrentList({ torrents, onRemove, onPlay, wide }: Torren
                       textAlign: 'left',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 8,
+                      gap: 10,
                     }}
                   >
                     <span style={{
                       fontSize: 10,
-                      color: 'var(--text-muted)',
-                      transition: 'transform .15s ease',
+                      color: 'var(--primary)',
+                      transition: 'transform .2s ease',
                       transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                       display: 'inline-block',
                       flexShrink: 0,
+                      textShadow: '0 0 4px var(--primary)',
                     }}>&#9654;</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{tor.name}</span>
                     <span style={{
-                      fontSize: 11,
-                      color: 'var(--text-muted)',
-                      fontWeight: 400,
+                      fontSize: 10,
+                      color: 'var(--danger)',
+                      fontWeight: 700,
                       flexShrink: 0,
-                    }}>{files.length} files</span>
+                      padding: '2px 8px',
+                      background: 'var(--danger-bg)',
+                      borderRadius: 'var(--radius)',
+                      border: '1px solid var(--danger)',
+                      textShadow: '0 0 4px var(--danger)',
+                    }}>{files.length} FILES</span>
                   </button>
                 ) : (
                   <button
@@ -158,16 +194,26 @@ export default function TorrentList({ torrents, onRemove, onPlay, wide }: Torren
                 <button
                   onClick={() => onRemove(tor.infoHash)}
                   style={{
-                    padding: '4px 10px',
+                    padding: '6px 12px',
                     borderRadius: 'var(--radius)',
-                    border: 'none',
+                    border: '1px solid var(--border)',
                     background: 'transparent',
-                    color: 'var(--text-muted)',
+                    color: 'var(--danger)',
                     cursor: 'pointer',
                     fontSize: 12,
-                    fontWeight: 500,
+                    fontWeight: 700,
                     flexShrink: 0,
-                    transition: 'color .15s ease',
+                    transition: 'all .2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--danger)'
+                    e.currentTarget.style.boxShadow = 'var(--glow-violet)'
+                    e.currentTarget.style.background = 'var(--danger-bg)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.background = 'transparent'
                   }}
                 >
                   &#10005;
@@ -177,7 +223,8 @@ export default function TorrentList({ torrents, onRemove, onPlay, wide }: Torren
               {multi && isOpen && (
                 <div style={{
                   borderTop: '1px solid var(--border)',
-                  padding: '4px 0',
+                  padding: '6px 0',
+                  background: 'var(--bg-muted)',
                 }}>
                   {files.map((file) => {
                     const ext = getExt(file.name)
@@ -189,30 +236,37 @@ export default function TorrentList({ torrents, onRemove, onPlay, wide }: Torren
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 10,
+                          gap: 12,
                           width: '100%',
-                          padding: '8px 14px 8px 28px',
+                          padding: '10px 16px 10px 32px',
                           border: 'none',
                           background: 'transparent',
                           cursor: 'pointer',
                           textAlign: 'left',
                           color: 'var(--text)',
-                          transition: 'background .1s ease',
+                          transition: 'all .15s ease',
                         }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover, rgba(255,255,255,0.03))' }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--bg-hover)'
+                          e.currentTarget.style.paddingLeft = '36px'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.paddingLeft = '32px'
+                        }}
                       >
                         {badge && (
                           <span style={{
-                            padding: '1px 5px',
-                            borderRadius: 3,
+                            padding: '2px 6px',
+                            borderRadius: 'var(--radius)',
                             background: badge,
-                            color: '#fff',
+                            color: '#000',
                             fontSize: 9,
                             fontWeight: 700,
                             textTransform: 'uppercase',
                             lineHeight: '1.4',
                             flexShrink: 0,
+                            boxShadow: `0 0 6px ${badge}`,
                           }}>
                             {ext}
                           </span>

@@ -4,6 +4,7 @@
   "indexerUrl": "http://prowlarr:9696",
   "indexerApiKey": "your-api-key-here",
   "downloadDir": "/data/downloads",
+  "authEnabled": true,
   "username": "admin",
   "password": "changeme"
 }
